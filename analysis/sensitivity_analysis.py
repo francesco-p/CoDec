@@ -9,9 +9,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 #import matlab.engine we need to install it for the virtualenv
 import ipdb
+import scipy.stats as spst
 from sklearn import metrics
 import sys
-sys.path.insert(1, '../algorithm/')
+sys.path.insert(1, '../graph_reducer/')
 import szemeredi_lemma_builder as slb
 import refinement_step as rs
 
@@ -25,7 +26,7 @@ class SensitivityAnalysis:
 
         # Find bounds parameters
         self.min_k = 2
-        self.min_step = 0.00001
+        self.min_step = 0.01 #0.00001
         self.tries = 20
 
 
@@ -243,7 +244,14 @@ class SensitivityAnalysis:
         :param graph: np.array() reconstructed graph
         :returns: np.array(float64) feature vector of measures
         """
-        pass
+        p1 = self.G.sum(0)
+        p2 = graph.sum(0)
+
+        e1 = spst.entropy(p1, p2)
+        e2 = spst.entropy(p2, p1)
+
+        return e1, e2
+
 
     def KVS_metric(self, graph):
         """ Implements Knn Voting System to calculate if the labeling is correct.
