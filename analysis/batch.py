@@ -25,6 +25,7 @@ n_graphs = conf.batch.n_graphs
 densities = conf.batch.densities
 CSV_PATH = conf.batch.CSV_PATH
 DSET_PATH = conf.batch.DSET_PATH
+refinement_type = 'degree_based'
 
 with io.open(CSV_PATH, 'w') as f:
     f.write(f"n,density,dset_id,n_partitions,k,k_epsilon,L2_distance,kld_1,kld_2,sze_idx,edge,trivial,refinement\n")
@@ -43,7 +44,7 @@ for d in densities:
         data['labels'] = []
 
         ### 3. ###
-        s = SensitivityAnalysis(data, 'indeg_guided')
+        s = SensitivityAnalysis(data, refinement_type)
 
         bounds = s.find_bounds()
         #if not s.bounds:
@@ -79,7 +80,7 @@ for d in densities:
             e_edge = s.bounds[0]
             e_trivial = s.bounds[1]
             k_epsilon = kec[max_k][0]
-            row = f"{n},{d:.2f},{dset_id},{n_partitions},{max_k},{k_epsilon:.4f},{l2_dist:.4f},{kld_1:.4f},{kld_2:.4f},{sze_idx:.4f},{e_edge:.4f},{e_trivial:.4f},1\n"
+            row = f"{n},{d:.2f},{dset_id},{n_partitions},{max_k},{k_epsilon:.4f},{l2_dist:.4f},{kld_1:.4f},{kld_2:.4f},{sze_idx:.4f},{e_edge:.4f},{e_trivial:.4f},{refinement_type}\n"
             print(row, end="")
             with io.open(CSV_PATH, 'a') as f:
                 f.write(row)
