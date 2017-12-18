@@ -1,3 +1,5 @@
 __pycache__/
 venv/
 conf.py
+data/
+!data/gen.py
