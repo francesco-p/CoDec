@@ -17,7 +17,6 @@ Indentation : 4spaces
 from sensitivity_analysis import SensitivityAnalysis
 import numpy as np
 import matplotlib.pyplot as plt
-import ipdb
 
 def check_validity(G, n, desired_d):
     """ Checks dimension and data type of the graph to reduce space consumption
