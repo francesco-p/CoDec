@@ -25,7 +25,7 @@ n_graphs = conf.batch.n_graphs
 densities = conf.batch.densities
 CSV_PATH = conf.batch.CSV_PATH
 DSET_PATH = conf.batch.DSET_PATH
-refinement_type = 'degree_based'
+refinement_type = conf.batch.refinement_type
 
 with io.open(CSV_PATH, 'w') as f:
     f.write(f"n,density,dset_id,n_partitions,k,k_epsilon,L2_distance,kld_1,kld_2,sze_idx,edge,trivial,refinement\n")

@@ -208,6 +208,7 @@ class SensitivityAnalysis:
                 bip_sim_mat = self.G[np.ix_(r_nodes, s_nodes)]
                 n = bip_sim_mat.shape[0]
                 bip_density = bip_sim_mat.sum() / (n ** 2.0)
+
                 # Put edges if above threshold
                 if bip_density > thresh:
                     reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = bip_density
