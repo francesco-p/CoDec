@@ -6,4 +6,5 @@ conf.py
 *.pdf
 *.csv
 *.sh
+readme.txt
 !data/gen.py

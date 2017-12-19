@@ -26,7 +26,7 @@ class SensitivityAnalysis:
 
         # Find bounds parameters
         self.min_k = 2
-        self.min_step = 0.01 #0.00001
+        self.min_step = 0.001 #0.00001
         self.tries = 20
 
 
@@ -52,7 +52,7 @@ class SensitivityAnalysis:
 
 
         # Reconstruction parameters
-        self.indensity_preservation = True
+        self.indensity_preservation = False
 
 
         # Matlab eng
@@ -211,7 +211,10 @@ class SensitivityAnalysis:
 
                 # Put edges if above threshold
                 if bip_density > thresh:
-                    reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = bip_density
+                    if self.is_weighted:
+                        reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = bip_density
+                    else:
+                        reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = 1
 
         # Implements indensity information preservation
         if self.indensity_preservation:
@@ -222,7 +225,10 @@ class SensitivityAnalysis:
                 n_edges = np.tril(self.G[np.ix_(indices_c, indices_c)], -1).sum()
                 indensity = n_edges / max_edges
                 if np.random.uniform(0,1,1) <= indensity:
-                     reconstructed_mat[np.ix_(indices_c, indices_c)] = indensity
+                    if self.is_weighted:
+                        reconstructed_mat[np.ix_(indices_c, indices_c)] = indensity
+                    else:
+                        reconstructed_mat[np.ix_(indices_c, indices_c)] = 1
 
         np.fill_diagonal(reconstructed_mat, 0.0)
         return reconstructed_mat
