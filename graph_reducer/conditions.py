@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse.linalg
 import math
 import sys
+import ipdb
 
 
 def alon1(self, cl_pair):
@@ -62,35 +63,74 @@ def alon2(self, cl_pair):
     return is_irregular, certs, compls
 
 
-def alon3(self, cl_pair, fast_convergence=True):
+def get_s_r_degrees(self, s, r):
+    """ Given two classes it returns a degree vector (indicator vector) where the degrees
+    have been calculated with respecto to each other set.
+    :param s: int, class s
+    :param r: int, class r
+    :returns: np.array, degree vector
     """
-    verify the third condition of Alon algorithm (irregularity of pair) and return the pair's certificate and
+
+    s_r_degs = np.zeros(len(self.degrees), dtype='int16')
+
+    # Gets the indices of elements which are part of class s, then r
+    s_indices = np.where(self.classes == s)[0]
+    r_indices = np.where(self.classes == r)[0]
+
+    # Calculates the degree and assigns it
+    s_r_degs[s_indices] = self.adj_mat[np.ix_(s_indices, r_indices)].sum(1)
+    s_r_degs[r_indices] = self.adj_mat[np.ix_(r_indices, s_indices)].sum(1)
+
+    return s_r_degs
+
+def alon3(self, cl_pair, fast_convergence=True):
+    """ verify the third condition of Alon algorithm (irregularity of pair) and return the pair's certificate and
     complement in case of irregularity
     :param cl_pair: the bipartite graph to be checked
     :param fast_convergence: apply the fast convergence version of condition 3
     :return: True if the condition is verified, False otherwise
     """
-
     is_irregular = False
 
     cert_s = []
     compl_s = []
     y0 = -1
 
-    # nh_mat = cl_pair.neighbourhood_matrix()
-    # nh_dev_mat = cl_pair.neighbourhood_deviation_matrix(nh_mat)
-    # s_degrees = np.diag(nh_mat)
-    nh_dev_mat, s_degrees = cl_pair.neighbourhood_deviation_matrix()
+    nh_dev_mat, aux = cl_pair.neighbourhood_deviation_matrix()
+
+    # Gets the vector of degrees of nodes of class s
+    s_degrees = get_s_r_degrees(self, cl_pair.s, cl_pair.r)
+    s_indices = np.where(self.classes == cl_pair.s)[0] #[TODO] optimiz
+    s_degrees = s_degrees[s_indices]
+
+    yp_indices = cl_pair.find_Yp(s_degrees, s_indices)
+
+    cert_s, y0 = cl_pair.compute_y0(nh_dev_mat, s_indices, yp_indices)
+
+    if cert_s is None:
+        is_irregular = False
+        return is_irregular, [[], []], [[], []]
+    else:
+        is_irregular = True
+        cert_r = np.where(self.adj_mat[y0] > 0)[0]
+
+        compl_s = set(s_indices) - set(cert_s)
+        r_indices = np.where(self.classes == cl_pair.r)[0] #[TODO] optimiz
+        compl_r = set(r_indices) - set(cert_r)
+        return is_irregular, [list(cert_r), list(cert_s)], [list(compl_r), list(compl_s)]
+
+
+    """
     if fast_convergence:
-        Y_indices = cl_pair.find_Y(nh_dev_mat)
+        #Y_indices = cl_pair.find_Y(nh_dev_mat)
 
-        if not list(Y_indices):
-            # enter in Y spurious condition
-            is_irregular = True
-            return is_irregular, [[], []], [[], []]
+        #if not list(Y_indices):
+            ## enter in Y spurious condition
+            #is_irregular = True
+            #return is_irregular, [[], []], [[], []]
 
-        Y_degrees = s_degrees[Y_indices]
-        Yp_indices = cl_pair.find_Yp(Y_degrees, Y_indices)
+        #Y_degrees = s_degrees[Y_indices]
+        Yp_indices = cl_pair.find_Yp(s_degrees, Y_indices)
 
         if not list(Yp_indices):
             # enter in Yp spurious condition
@@ -118,6 +158,7 @@ def alon3(self, cl_pair, fast_convergence=True):
         compl_s = []
 
     return is_irregular, [cert_r, cert_s], [compl_r, compl_s]
+    """
 
 
 def frieze_kannan(self, cl_pair):

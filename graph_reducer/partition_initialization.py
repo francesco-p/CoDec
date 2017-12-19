@@ -12,7 +12,7 @@ def random(self, b=2):
             if set to False, node are decreasingly ordered by their degree and then splitted
             in classes
     """
-    self.k = 2
+    self.k = 4
     self.classes = np.zeros(self.N).astype('int32')
     self.classes_cardinality = self.N // self.k
     self.classes = np.repeat(range(1, self.k+1), self.classes_cardinality).astype('int32')

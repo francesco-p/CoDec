@@ -1,4 +1,5 @@
 import numpy as np
+import ipdb
 
 
 class ClassesPair:
@@ -45,6 +46,7 @@ class ClassesPair:
         :return the density
         """
         # [TODO] optimization: does sum() already return a float?
+        #ipdb.set_trace()
         return float(self.bip_adj_mat.sum()) / (self.n ** 2.0)
 
     def classes_vertices_degrees(self):
@@ -75,6 +77,26 @@ class ClassesPair:
         mat -= (self.bip_avg_deg ** 2.0) / self.n
         return mat, rs_degrees
 
+    def get_s_r_degrees(self):
+        """ Given two classes it returns a degree vector (indicator vector) where the degrees
+        have been calculated with respecto to each other set.
+        :param s: int, class s
+        :param r: int, class r
+        :returns: np.array, degree vector
+        """
+
+        s_r_degs = np.zeros(len(self.degrees), dtype='int16')
+
+        # Gets the indices of elements which are part of class s, then r
+        s_indices = np.where(self.classes == self.s)[0]
+        r_indices = np.where(self.classes == self.r)[0]
+
+        # Calculates the degree and assigns it
+        s_r_degs[s_indices] = self.adj_mat[np.ix_(s_indices, r_indices)].sum(1)
+        s_r_degs[r_indices] = self.adj_mat[np.ix_(r_indices, s_indices)].sum(1)
+
+        return s_r_degs
+
     def find_Y(self, nh_dev_mat):
         inner_sums = nh_dev_mat.sum(1) - np.diag(nh_dev_mat)
         inner_sums_indices = np.argsort(inner_sums)[::-1]
@@ -89,11 +111,31 @@ class ClassesPair:
                 return inner_sums_indices[0:i]
         return np.array([])
 
-    def find_Yp(self, degrees, Y_indices):
-        # print "min el = " + str(np.min(degrees - self.bip_avg_degree))
-        return Y_indices[np.abs(degrees - self.bip_avg_deg) < ((self.epsilon ** 4.0) * self.n)]
 
-    def compute_y0(self, nh_dev_mat, Y_indices, Yp_indices):
+    def find_Yp(self, bip_degrees, s_indices):
+        # [TODO ASAP BUG] indices of s_indices
+        #return s_indices[np.abs(bip_degrees - self.bip_avg_deg) < ((self.epsilon ** 4.0) * self.n)]
+        mask = np.abs(bip_degrees - self.bip_avg_deg) < ((self.epsilon ** 4.0) * self.n)
+        return np.where(mask == True)
+
+
+    def compute_y0(self, nh_dev_mat, s_indices, yp_indices):
+        """ Find y0 and certificates if it is the case """
+
+        rect_mat = nh_dev_mat[yp_indices]
+        boolean_matrix = rect_mat > (2 * self.epsilon**4 * self.n)
+        cardinality_by0s = boolean_matrix.sum(1)
+
+        y0 = np.argmax(cardinality_by0s)
+
+        if cardinality_by0s[y0] > (self.epsilon**4 * self.n / 4.0):
+            cert_s = s_indices[boolean_matrix[y0]]
+            return cert_s, y0
+        else:
+            return None, y0
+
+
+    def old_compute_y0(self, nh_dev_mat, Y_indices, Yp_indices):
         sums = np.full((self.n,), -np.inf)
         for i in Yp_indices:
             sums[i] = 0
@@ -203,7 +245,28 @@ class WeightedClassesPair:
         return np.array([])
 
     def find_Yp(self, degrees, Y_indices):
+
         return Y_indices[np.abs(degrees - self.bip_avg_deg) < ((self.epsilon ** 4.0) * self.n)]
+
+    def get_s_r_degrees(self):
+        """ Given two classes it returns a degree vector (indicator vector) where the degrees
+        have been calculated with respecto to each other set.
+        :param s: int, class s
+        :param r: int, class r
+        :returns: np.array, degree vector
+        """
+
+        s_r_degs = np.zeros(len(self.degrees), dtype='int16')
+
+        # Gets the indices of elements which are part of class s, then r
+        s_indices = np.where(self.classes == self.s)[0]
+        r_indices = np.where(self.classes == self.r)[0]
+
+        # Calculates the degree and assigns it
+        s_r_degs[s_indices] = self.adj_mat[np.ix_(s_indices, r_indices)].sum(1)
+        s_r_degs[r_indices] = self.adj_mat[np.ix_(r_indices, s_indices)].sum(1)
+
+        return s_r_degs
 
     def compute_y0(self, nh_dev_mat, Y_indices, Yp_indices):
         sums = np.full((self.n,), -np.inf)

@@ -3,6 +3,7 @@ import numpy as np
 
 from classes_pair import ClassesPair
 from classes_pair import WeightedClassesPair
+import ipdb
 
 
 class SzemerediRegularityLemma:
@@ -199,6 +200,7 @@ class SzemerediRegularityLemma:
             iteration += 1
             num_of_irregular_pairs = self.check_pairs_regularity()
             total_pairs = (self.k * (self.k - 1)) / 2.0
+            ipdb.set_trace()
 
             if self.check_partition_regularity(num_of_irregular_pairs):
                 if verbose:
