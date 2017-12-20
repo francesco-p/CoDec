@@ -113,23 +113,26 @@ class ClassesPair:
 
 
     def find_Yp(self, bip_degrees, s_indices):
-        # [TODO ASAP BUG] indices of s_indices
-        #return s_indices[np.abs(bip_degrees - self.bip_avg_deg) < ((self.epsilon ** 4.0) * self.n)]
         mask = np.abs(bip_degrees - self.bip_avg_deg) < ((self.epsilon ** 4.0) * self.n)
-        return np.where(mask == True)
+        yp_i = np.where(mask == True)[0]
+        return yp_i
 
 
-    def compute_y0(self, nh_dev_mat, s_indices, yp_indices):
+    def compute_y0(self, nh_dev_mat, s_indices, yp_i):
         """ Find y0 and certificates if it is the case """
+        if yp_i.size == 0:
+            ipdb.set_trace()
 
-        rect_mat = nh_dev_mat[yp_indices]
+        rect_mat = nh_dev_mat[yp_i]
         boolean_matrix = rect_mat > (2 * self.epsilon**4 * self.n)
         cardinality_by0s = boolean_matrix.sum(1)
 
-        y0 = np.argmax(cardinality_by0s)
+        y0_idx = np.argmax(cardinality_by0s)
+        aux = yp_i[y0_idx]
+        y0 = s_indices[aux]
 
-        if cardinality_by0s[y0] > (self.epsilon**4 * self.n / 4.0):
-            cert_s = s_indices[boolean_matrix[y0]]
+        if cardinality_by0s[y0_idx] > (self.epsilon**4 * self.n / 4.0):
+            cert_s = s_indices[boolean_matrix[y0_idx]]
             return cert_s, y0
         else:
             return None, y0

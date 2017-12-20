@@ -25,8 +25,8 @@ class SensitivityAnalysis:
         self.set_dset(dset)
 
         # Find bounds parameters
-        self.min_k = 2
-        self.min_step = 0.001 #0.00001
+        self.min_k = 4
+        self.min_step = 0.0001 #0.00001
         self.tries = 20
 
 
@@ -52,7 +52,7 @@ class SensitivityAnalysis:
 
 
         # Reconstruction parameters
-        self.indensity_preservation = False
+        self.indensity_preservation = True
 
 
         # Matlab eng

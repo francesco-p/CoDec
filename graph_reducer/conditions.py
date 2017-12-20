@@ -98,26 +98,40 @@ def alon3(self, cl_pair, fast_convergence=True):
 
     nh_dev_mat, aux = cl_pair.neighbourhood_deviation_matrix()
 
-    # Gets the vector of degrees of nodes of class s
+    # Gets the vector of degrees of nodes of class s wrt class r
     s_degrees = get_s_r_degrees(self, cl_pair.s, cl_pair.r)
-    s_indices = np.where(self.classes == cl_pair.s)[0] #[TODO] optimiz
+
+    s_indices = np.where(self.classes == cl_pair.s)[0]
     s_degrees = s_degrees[s_indices]
 
-    yp_indices = cl_pair.find_Yp(s_degrees, s_indices)
+    yp_filter = cl_pair.find_Yp(s_degrees, s_indices)
 
-    cert_s, y0 = cl_pair.compute_y0(nh_dev_mat, s_indices, yp_indices)
+    if yp_filter.size == 0:
+        is_irregular = True
+        return is_irregular, [[], []], [[], []]
 
-    if cert_s is None:
+    s_certs, y0 = cl_pair.compute_y0(nh_dev_mat, s_indices, yp_filter)
+
+    if s_certs is None:
         is_irregular = False
         return is_irregular, [[], []], [[], []]
     else:
-        is_irregular = True
-        cert_r = np.where(self.adj_mat[y0] > 0)[0]
+        assert np.array_equal(np.intersect1d(s_certs, s_indices), s_certs) == True, "cert_is not subset of s_indices"
+        assert (y0 in s_indices) == True, "y0 not in s_indices"
 
-        compl_s = set(s_indices) - set(cert_s)
+        is_irregular = True
         r_indices = np.where(self.classes == cl_pair.r)[0] #[TODO] optimiz
-        compl_r = set(r_indices) - set(cert_r)
-        return is_irregular, [list(cert_r), list(cert_s)], [list(compl_r), list(compl_s)]
+        b_mask = self.adj_mat[np.ix_(np.array([y0]), r_indices)] > 0
+        r_certs = r_indices[b_mask[0]]
+        assert np.array_equal(np.intersect1d(r_certs, r_indices), r_certs) == True, "cert_is not subset of s_indices"
+
+        # [BUG] cannot do set(s_indices) - set(s_certs)
+        s_compls = np.setdiff1d(s_indices, s_certs)
+        r_compls = np.setdiff1d(r_indices, r_certs)
+        assert s_compls.size + s_certs.size == self.classes_cardinality, "Wrong cardinality"
+        assert r_compls.size + r_certs.size == self.classes_cardinality, "Wrong cardinality"
+
+        return is_irregular, [r_certs.tolist(), s_certs.tolist()], [r_compls.tolist(), s_compls.tolist()]
 
 
     """

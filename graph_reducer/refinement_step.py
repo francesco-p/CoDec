@@ -21,6 +21,7 @@ def partition_correct(self):
     return True
 
 
+
 ##########################################################################
 ######################## INDEGREE REFINEMENT #############################
 ##########################################################################
@@ -134,9 +135,11 @@ def indeg_guided(self):
     """ In-degree based refinemet. The refinement exploits the internal structure of the classes of a given partition.
     :returns: True if the new partition is valid, False otherwise
     """
+    #ipdb.set_trace()
     threshold = 0.5
 
     to_be_refined = list(range(1, self.k + 1))
+    old_cardinality = self.classes_cardinality
     self.classes_cardinality //= 2
     in_densities = compute_indensities(self)
     new_k = 0
@@ -157,9 +160,13 @@ def indeg_guided(self):
             to_be_refined.remove(r)
 
             s_certs = np.array(self.certs_compls_list[r - 2][s - 1][0][1]).astype('int32')
-            r_certs = np.array(self.certs_compls_list[r - 2][s - 1][0][0]).astype('int32')
             s_compls = np.array(self.certs_compls_list[r - 2][s - 1][1][1]).astype('int32')
+            assert s_certs.size + s_compls.size == old_cardinality
+
             r_compls = np.array(self.certs_compls_list[r - 2][s - 1][1][0]).astype('int32')
+            r_certs = np.array(self.certs_compls_list[r - 2][s - 1][0][0]).astype('int32')
+            assert r_certs.size + r_compls.size == old_cardinality
+
 
             # Merging the two complements
             compls = np.append(s_compls, r_compls)
@@ -244,7 +251,7 @@ def indeg_guided(self):
     # Check validity of class C0, if invalid and enough nodes, distribute the exceeding nodes among the classes
     c0_indices = np.where(self.classes == 0)[0]
     if c0_indices.size >= (self.epsilon * self.adj_mat.shape[0]):
-        if c0_indices.ize > self.k:
+        if c0_indices.size > self.k:
             self.classes[c0_indices[:self.k]] = np.array(range(1, self.k+1))*-1
         else:
             print('[ refinement ] Invalid cardinality of C_0')
@@ -252,6 +259,8 @@ def indeg_guided(self):
 
     self.classes *= -1
 
+    if not partition_correct(self):
+        ipdb.set_trace()
     return True
 
 
@@ -299,6 +308,7 @@ def degree_based(self):
     perform step 4 of Alon algorithm, performing the refinement of the pairs, processing nodes according to their degree. Some heuristic is applied in order to
     speed up the process
     """
+    #ipdb.set_trace()
     to_be_refined = list(range(1, self.k + 1))
     irregular_r_indices = []
     is_classes_cardinality_odd = self.classes_cardinality % 2 == 1
@@ -363,5 +373,11 @@ def degree_based(self):
     if C0_cardinality > self.epsilon * self.N:
         #sys.exit("Error: not enough nodes in C0 to create a new class.Try to increase epsilon or decrease the number of nodes in the graph")
         #print("Error: not enough nodes in C0 to create a new class. Try to increase epsilon or decrease the number of nodes in the graph")
+
+        if not partition_correct(self):
+            ipdb.set_trace()
         return False
+
+    if not partition_correct(self):
+        ipdb.set_trace()
     return True
