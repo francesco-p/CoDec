@@ -63,13 +63,12 @@ def plot_graphs(graph, sze):
     plt.show()
 
 
-
 ######################################################
 ################ Main script code ####################
 ######################################################
 
 ### 1. Fix density d and size of the graph n ###
-n = 1000
+n = 500
 d = 0.85
 
 G = synthetic_graph(n, d)

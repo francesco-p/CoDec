@@ -44,7 +44,6 @@ class SensitivityAnalysis:
 
         self.drop_edges_between_irregular_pairs = True
 
-
         # SZE running parameters
         self.iteration_by_iteration = False
         self.sze_verbose = False

@@ -83,24 +83,18 @@ def get_s_r_degrees(self, s, r):
 
     return s_r_degs
 
-def alon3(self, cl_pair, fast_convergence=True):
-    """ verify the third condition of Alon algorithm (irregularity of pair) and return the pair's certificate and
+def alon3(self, cl_pair):
+    """ Verifies the third condition of Alon algorithm (irregularity of pair) and return the pair's certificate and
     complement in case of irregularity
     :param cl_pair: the bipartite graph to be checked
-    :param fast_convergence: apply the fast convergence version of condition 3
     :return: True if the condition is verified, False otherwise
     """
     is_irregular = False
-
-    cert_s = []
-    compl_s = []
-    y0 = -1
 
     nh_dev_mat, aux = cl_pair.neighbourhood_deviation_matrix()
 
     # Gets the vector of degrees of nodes of class s wrt class r
     s_degrees = get_s_r_degrees(self, cl_pair.s, cl_pair.r)
-
     s_indices = np.where(self.classes == cl_pair.s)[0]
     s_degrees = s_degrees[s_indices]
 
@@ -133,46 +127,6 @@ def alon3(self, cl_pair, fast_convergence=True):
 
         return is_irregular, [r_certs.tolist(), s_certs.tolist()], [r_compls.tolist(), s_compls.tolist()]
 
-
-    """
-    if fast_convergence:
-        #Y_indices = cl_pair.find_Y(nh_dev_mat)
-
-        #if not list(Y_indices):
-            ## enter in Y spurious condition
-            #is_irregular = True
-            #return is_irregular, [[], []], [[], []]
-
-        #Y_degrees = s_degrees[Y_indices]
-        Yp_indices = cl_pair.find_Yp(s_degrees, Y_indices)
-
-        if not list(Yp_indices):
-            # enter in Yp spurious condition
-            is_irregular = False
-            return is_irregular, [[], []], [[], []]
-
-        y0 = cl_pair.compute_y0(nh_dev_mat, Y_indices, Yp_indices)
-
-        cert_s, compl_s = cl_pair.find_s_cert_and_compl(nh_dev_mat, y0, Yp_indices)
-    else:
-        s_indices = cl_pair.find_Yp(s_degrees, np.arange(cl_pair.n))
-
-        for y0 in s_indices:
-            cert_s, compl_s = cl_pair.find_s_cert_and_compl(nh_dev_mat, y0, s_indices)
-            if cert_s:
-                break
-    cert_r, compl_r = cl_pair.find_r_cert_and_compl(y0)
-
-    if cert_r and cert_s:
-        is_irregular = True
-    else:
-        cert_r = []
-        cert_s = []
-        compl_r = []
-        compl_s = []
-
-    return is_irregular, [cert_r, cert_s], [compl_r, compl_s]
-    """
 
 
 def frieze_kannan(self, cl_pair):

@@ -97,38 +97,42 @@ class ClassesPair:
 
         return s_r_degs
 
-    def find_Y(self, nh_dev_mat):
-        inner_sums = nh_dev_mat.sum(1) - np.diag(nh_dev_mat)
-        inner_sums_indices = np.argsort(inner_sums)[::-1]
-        y_card_thresh = int((self.epsilon * self.n) + 1)
-        outer_sum = inner_sums[inner_sums_indices[0:(y_card_thresh - 1)]].sum()
-
-        for i in range(y_card_thresh, self.n):
-            outer_sum += inner_sums[inner_sums_indices[i]]
-            sigma_y = outer_sum / (i ** 2.0)
-            # print "sigma_y = " + str(sigma_y)
-            if sigma_y >= ((self.epsilon ** 3.0) / 2.0) * self.n:
-                return inner_sums_indices[0:i]
-        return np.array([])
-
 
     def find_Yp(self, bip_degrees, s_indices):
+        """ Find a subset of s_indices which will create the Y', it could return an empty array
+        :param bip_degrees: np.array(int32) array of the degrees of s nodes w.r.t. class r
+        :param s_indices: np.array(int32) array of the indices of class s
+        :return: np.array(int32) subset of indices of class s 
+        """
         mask = np.abs(bip_degrees - self.bip_avg_deg) < ((self.epsilon ** 4.0) * self.n)
         yp_i = np.where(mask == True)[0]
         return yp_i
 
 
     def compute_y0(self, nh_dev_mat, s_indices, yp_i):
-        """ Find y0 and certificates if it is the case """
-        if yp_i.size == 0:
-            ipdb.set_trace()
+        """ Finds y0 index node and certificates indices 
+        :param nh_dev_mat: np.array((s.size, s.size), dtype='float32') neighbourhood deviation matrix of class s
+        :param s_indices: np.array(self.classes_cardinality, dtype='float32') indices of the nodes of class s
+        :param yp_i: np.array(dtype='float32') these are indices of the rows to be filtered in the nh_dev_mat
+        :return: tuple cert_s which is a np.array(float32) subset of s_indices if it possible, None otherwise
 
+        [TODO] : 
+            - why yp_i float32?
+            - type of cert_s is float32?
+        """
+
+        # Create rectancular matrix to create |y'| sets
         rect_mat = nh_dev_mat[yp_i]
+
+        # Check which set have the best neighbour deviation
         boolean_matrix = rect_mat > (2 * self.epsilon**4 * self.n)
         cardinality_by0s = boolean_matrix.sum(1)
 
+        # Select the best set
         y0_idx = np.argmax(cardinality_by0s)
         aux = yp_i[y0_idx]
+
+        # Gets the y0 index
         y0 = s_indices[aux]
 
         if cardinality_by0s[y0_idx] > (self.epsilon**4 * self.n / 4.0):
@@ -137,27 +141,6 @@ class ClassesPair:
         else:
             return None, y0
 
-
-    def old_compute_y0(self, nh_dev_mat, Y_indices, Yp_indices):
-        sums = np.full((self.n,), -np.inf)
-        for i in Yp_indices:
-            sums[i] = 0
-            for j in list(set(Y_indices) - set(Yp_indices)):
-                sums[i] += nh_dev_mat[i, j]
-        return np.argmax(sums)
-
-    def find_s_cert_and_compl(self, nh_dev_mat, y0, Yp_indices):
-        outliers_in_s = set(np.where(nh_dev_mat[y0, :] > 2.0 * (self.epsilon ** 4.0) * self.n)[0])
-        outliers_in_Yp = list(set(Yp_indices) & outliers_in_s)
-        cert = list(self.index_map[1][outliers_in_Yp])
-        compl = [self.index_map[1][i] for i in range(self.n) if i not in outliers_in_Yp]
-        return cert, compl
-
-    def find_r_cert_and_compl(self, y0):
-        indices = np.where(self.bip_adj_mat[:, y0] > 0)[0]
-        cert = list(self.index_map[0][indices])
-        compl = [self.index_map[0][i] for i in range(self.n) if i not in indices]
-        return cert, compl
 
 
 class WeightedClassesPair:
