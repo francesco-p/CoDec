@@ -16,52 +16,6 @@ def alon1(self, cl_pair):
     return cl_pair.bip_avg_deg < (self.epsilon ** 3.0) * cl_pair.n, [[], []], [[], []]
 
 
-def alon2new(self, cl_pair):
-
-    s_vertices_degrees = cl_pair.classes_vertices_degrees()[1, :]
-    deviated_nodes = np.abs(s_vertices_degrees - cl_pair.bip_avg_deg) > (self.epsilon ** 4.0) * cl_pair.n
-    if deviated_nodes.sum() > (1/8 * self.epsilon**4 * cl_pair.n):
-        pass
-    # se non trova il subset allora ritorno che la condition è falsa
-
-
-
-
-def alon2(self, cl_pair):
-    """
-    verify the second condition of Alon algorithm (irregularity of pair)
-    :param cl_pair: the bipartite graph to be checked
-    :return: True if the condition is verified, False otherwise
-    """
-    certs = []
-    compls = []
-    s_vertices_degrees = cl_pair.classes_vertices_degrees()[1, :]
-    deviated_nodes = np.abs(s_vertices_degrees - cl_pair.bip_avg_deg) > (self.epsilon ** 4.0) * cl_pair.n
-    deviation_threshold = (self.epsilon ** 4.0) * cl_pair.n
-    # retrieve positive deviated nodes
-    one_direction_nodes = deviated_nodes * (s_vertices_degrees - cl_pair.bip_avg_deg > deviation_threshold)
-    is_irregular = one_direction_nodes.sum() >= (1.0 / 16.0) * (self.epsilon ** 4.0) * cl_pair.n
-
-    if is_irregular:
-        certs.append(list(cl_pair.index_map[0][range(cl_pair.n)]))
-        certs.append(list(cl_pair.index_map[1][one_direction_nodes]))
-        compls.append([])
-        compls.append(list(cl_pair.index_map[1][~one_direction_nodes]))
-    else:
-        # retrieve negative deviated nodes
-        one_direction_nodes = deviated_nodes * (s_vertices_degrees - cl_pair.bip_avg_deg < -deviation_threshold)
-        is_irregular = one_direction_nodes.sum() >= (1.0 / 16.0) * (self.epsilon ** 4.0) * cl_pair.n
-        if is_irregular:
-            certs.append(list(cl_pair.index_map[0][range(cl_pair.n)]))
-            certs.append(list(cl_pair.index_map[1][one_direction_nodes]))
-            compls.append([])
-            compls.append(list(cl_pair.index_map[1][~one_direction_nodes]))
-        else:
-            certs = [[], []]
-            compls = [[], []]
-
-    return is_irregular, certs, compls
-
 
 def get_s_r_degrees(self, s, r):
     """ Given two classes it returns a degree vector (indicator vector) where the degrees
@@ -82,6 +36,43 @@ def get_s_r_degrees(self, s, r):
     s_r_degs[r_indices] = self.adj_mat[np.ix_(r_indices, s_indices)].sum(1)
 
     return s_r_degs
+
+
+def alon2(self, cl_pair):
+    """ Verifies the third condition of Alon algorithm (irregularity of pair) and return the pair's certificate and
+    complement in case of irregularity
+    :param cl_pair: the bipartite graph to be checked
+    :return: True if the condition is verified, False otherwise
+    """
+
+    #ipdb.set_trace()
+
+    # Gets the vector of degrees of nodes of class s wrt class r
+    s_degrees = get_s_r_degrees(self, cl_pair.s, cl_pair.r)
+    s_indices = np.where(self.classes == cl_pair.s)[0]
+    s_degrees = s_degrees[s_indices]
+
+    deviated_nodes_mask = np.abs(s_degrees - cl_pair.bip_avg_deg) >= (self.epsilon ** 4.0) * cl_pair.n
+
+    if deviated_nodes_mask.sum() > (1/8 * self.epsilon**4 * cl_pair.n):
+        # [TODO] Heuristic? Zip?
+        s_certs = s_indices[deviated_nodes_mask]
+        s_compls = np.setdiff1d(s_indices, s_certs)
+
+        # Takes all the indices of class r which are connected to s_certs
+        r_indices = np.where(self.classes == cl_pair.r)[0] #[TODO] optimiz, reuse structure
+        b_mask = self.adj_mat[np.ix_(s_certs, r_indices)] > 0
+        b_mask = b_mask.any(0)
+
+        r_certs = r_indices[b_mask]
+        r_compls = np.setdiff1d(r_indices, r_certs)
+
+        is_irregular = True
+        return is_irregular, [r_certs.tolist(), s_certs.tolist()], [r_compls.tolist(), s_compls.tolist()]
+    else:
+        is_irregular = False
+        return is_irregular, [[], []], [[], []]
+
 
 def alon3(self, cl_pair):
     """ Verifies the third condition of Alon algorithm (irregularity of pair) and return the pair's certificate and
@@ -127,69 +118,3 @@ def alon3(self, cl_pair):
 
         return is_irregular, [r_certs.tolist(), s_certs.tolist()], [r_compls.tolist(), s_compls.tolist()]
 
-
-
-def frieze_kannan(self, cl_pair):
-    """
-    verify the condition of Frieze and Kannan algorithm (irregularity of pair) and return the pair's certificate and
-    complement in case of irregularity
-    :param cl_pair: the bipartite graph to be checked
-    :return: True if the condition is verified, False otherwise
-    """
-    cert_r = []
-    cert_s = []
-    compl_r = []
-    compl_s = []
-
-    if self.is_weighted:
-        W = cl_pair.bip_sim_mat - cl_pair.bip_density
-    else:
-        W = cl_pair.bip_adj_mat - cl_pair.bip_density
-
-    x, sv_1, y = scipy.sparse.linalg.svds(W, k=1, which='LM')
-
-    is_irregular = (sv_1 >= self.epsilon * cl_pair.n)
-
-    if is_irregular:
-        beta = 3.0 / self.epsilon
-        x = x.ravel()
-        y = y.ravel()
-        hat_thresh = beta / math.sqrt(cl_pair.n)
-        x_hat = np.where(np.abs(x) <= hat_thresh, x, 0.0)
-        y_hat = np.where(np.abs(y) <= hat_thresh, y, 0.0)
-
-        quadratic_threshold = (self.epsilon - 2.0 / beta) * (cl_pair.n / 4.0)
-
-        x_mask = x_hat > 0
-        y_mask = y_hat > 0
-        x_plus = np.where(x_mask, x_hat, 0.0)
-        x_minus = np.where(~x_mask, x_hat, 0.0)
-        y_plus = np.where(y_mask, y_hat, 0.0)
-        y_minus = np.where(~y_mask, y_hat, 0.0)
-
-        r_mask = np.empty((0, 0))
-        s_mask = np.empty((0, 0))
-
-        q_plus = y_plus * 1.0 / hat_thresh
-        q_minus = y_minus * 1.0 / hat_thresh
-
-        if x_plus @ W @ y_plus >= quadratic_threshold:
-            r_mask = (W @ q_plus) >= 0.0
-            s_mask = (r_mask @ W) >= 0.0
-        elif x_plus @ W @ y_minus >= quadratic_threshold:
-            r_mask = (W @ q_minus) >= 0.0
-            s_mask = (r_mask @ W) <= 0.0
-        elif x_minus @ W @ y_plus >= quadratic_threshold:
-            r_mask = (W @ q_plus) <= 0.0
-            s_mask = (r_mask @ W) >= 0.0
-        elif x_minus @ W @ y_minus >= quadratic_threshold:
-            r_mask = (W @ q_minus) <= 0.0
-            s_mask = (r_mask @ W) <= 0.0
-        else:
-            sys.exit("no condition on the quadratic form was verified")
-
-        cert_r = list(cl_pair.index_map[0][r_mask])
-        compl_r = list(cl_pair.index_map[0][~r_mask])
-        cert_s = list(cl_pair.index_map[1][s_mask])
-        compl_s = list(cl_pair.index_map[1][~s_mask])
-    return is_irregular, [cert_r, cert_s], [compl_r, compl_s]

@@ -68,8 +68,8 @@ def plot_graphs(graph, sze):
 ######################################################
 
 ### 1. Fix density d and size of the graph n ###
-n = 500
-d = 0.85
+n = 100
+d = 0.55
 
 G = synthetic_graph(n, d)
 check_validity(G, n, d)

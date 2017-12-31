@@ -84,31 +84,6 @@ class SzemerediRegularityLemma:
                     cl_pair = ClassesPair(self.adj_mat, self.classes, r, s, self.epsilon)
                 self.reduced_sim_mat[r - 1, s - 1] = self.reduced_sim_mat[s - 1, r - 1] = cl_pair.bip_density
 
-    def reconstruct_original_mat(self, thresh, intracluster_weight=0):
-        """
-        reconstruct a similarity matrix with size equals to the original one, from the reduced similarity matrix
-        :param thresh: a threshold parameter to prune the edges of the graph
-        """
-        reconstructed_mat = np.zeros((self.N, self.N), dtype='float32')
-
-        r_nodes = self.classes > 0
-        reconstructed_mat[np.ix_(r_nodes, r_nodes)] = intracluster_weight 
-
-        for r in range(2, self.k + 1):
-            r_nodes = self.classes == r
-            reconstructed_mat[np.ix_(r_nodes, r_nodes)] = intracluster_weight
-            for s in range(1, r):
-                if self.is_weighted:
-                    cl_pair = WeightedClassesPair(self.sim_mat, self.adj_mat, self.classes, r, s, self.epsilon)
-                else:
-                    cl_pair = ClassesPair(self.adj_mat, self.classes, r, s, self.epsilon)
-
-                s_nodes = self.classes == s
-                if cl_pair.bip_density > thresh:
-                    reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = cl_pair.bip_density
-        np.fill_diagonal(reconstructed_mat, 0.0)
-        return reconstructed_mat
-
 
     def check_pairs_regularity(self):
         """

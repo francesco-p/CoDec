@@ -51,7 +51,7 @@ class SensitivityAnalysis:
 
 
         # Reconstruction parameters
-        self.indensity_preservation = True
+        self.indensity_preservation = False
 
 
         # Matlab eng

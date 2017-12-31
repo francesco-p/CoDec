@@ -29,8 +29,8 @@ def generate_szemeredi_reg_lemma_implementation(kind, sim_mat, epsilon, is_weigh
         alg.partition_initialization = partition_initialization.degree_based
 
     if kind == "alon":
-        #alg.conditions = [conditions.alon1, conditions.alon2, conditions.alon3]
-        alg.conditions = [conditions.alon1, conditions.alon3]
+        alg.conditions = [conditions.alon1, conditions.alon2, conditions.alon3]
+        #alg.conditions = [conditions.alon1, conditions.alon3]
     elif kind == "frieze_kannan":
         alg.conditions = [conditions.frieze_kannan]
     else:
