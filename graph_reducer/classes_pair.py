@@ -3,99 +3,45 @@ import ipdb
 
 
 class ClassesPair:
-    bip_adj_mat = np.empty((0, 0), dtype='int8')
-    """The bipartite adjacency matrix. Given a bipartite graph with classes r and s, the rows of this matrix represent
-       the nodes in r, while the columns the nodes in s"""
-    r = s = -1
-    """The classes composing the bipartite graph"""
-    n = 0
-    """the cardinality of a class"""
-    index_map = np.empty((0, 0))
-    """A mapping from the bipartite adjacency matrix nodes to the adjacency matrix ones"""
-    bip_avg_deg = 0
-    """the average degree of the graph"""
-    bip_density = 0
-    """the average density of the graph"""
-    epsilon = 0.0
-    """the epsilon parameter"""
 
     def __init__(self, adj_mat, classes, r, s, epsilon):
+
+        # Classes id
         self.r = r
         self.s = s
-        # [TODO] optimization: why using index_map? and vstack? to check the cardinality?
-        self.index_map = np.where(classes == r)[0]
-        self.index_map = np.vstack((self.index_map, np.where(classes == s)[0]))
-        self.bip_adj_mat = adj_mat[np.ix_(self.index_map[0], self.index_map[1])]
-        # [TODO] question: wouldn't it be = to self.classes_cardinality?
-        self.n = self.bip_adj_mat.shape[0]
-        self.bip_avg_deg = self.bip_avg_degree()
-        self.bip_density = self.compute_bip_density()
+
+        # Classes indices w.r.t. original graph uint16 from 0 to 65535
+        self.s_indices = np.where(classes == self.s)[0].astype('uint16')
+        self.r_indices = np.where(classes == self.r)[0].astype('uint16')
+
+        # Bipartite adjacency matrix, we've lost the indices w.r.t. adj_mat, inherits dtype of adj_mat
+        self.bip_adj_mat = adj_mat[np.ix_(self.s_indices, self.r_indices)]
+
+        # Cardinality of the classes
+        self.classes_n = self.bip_adj_mat.shape[0]
+
+        # Bipartite average degree
+        self.bip_avg_deg = (self.bip_adj_mat.sum(0) + self.bip_adj_mat.sum(1)).sum() / (2.0 * self.classes_n)
+
+        # Compute the density of a bipartite graph as the sum of the edges over the number of all possible edges in the bipartite graph
+        self.bip_density = self.bip_adj_mat.sum() / (self.classes_n ** 2.0)
+
+        # Current epsilon used
         self.epsilon = epsilon
 
-    def bip_avg_degree(self):
-        """
-        compute the average degree of the bipartite graph
-        :return the average degree
-        """
-        return (self.bip_adj_mat.sum(0) + self.bip_adj_mat.sum(1)).sum() / (2.0 * self.n)
-
-    def compute_bip_density(self):
-        """
-        compute the density of a bipartite graph as the sum of the edges over the number of all possible edges in the
-        bipartite graph
-        :return the density
-        """
-        # [TODO] optimization: does sum() already return a float?
-        #ipdb.set_trace()
-        return float(self.bip_adj_mat.sum()) / (self.n ** 2.0)
-
-    def classes_vertices_degrees(self):
-        """
-        compute the degree of all vertices in the bipartite graph
-        :return a (n,) numpy array containing the degree of each vertex
-        """
-        c_v_degs = np.sum(self.bip_adj_mat, 0)
-        c_v_degs = np.vstack((c_v_degs, np.sum(self.bip_adj_mat, 1)))
-        return c_v_degs
-
-    # def neighbourhood_matrix(self, transpose_first=True):
-    #     if transpose_first:
-    #         return self.bip_adj_mat.T @ self.bip_adj_mat
-    #     else:
-    #         return self.bip_adj_mat @ self.bip_adj_mat.T
-    #
-    # def neighbourhood_deviation_matrix(self, nh_mat):
-    #     return nh_mat - ((self.bip_avg_deg ** 2.0) / self.n)
-
-    def neighbourhood_deviation_matrix(self, transpose_first=True):
-        # [TODO] can we do it in gpu with cuBLAS? :)
-        if transpose_first:
-            mat = self.bip_adj_mat.T @ self.bip_adj_mat
-        else:
-            mat = self.bip_adj_mat @ self.bip_adj_mat.T
-        rs_degrees = np.diag(mat)
-        mat -= (self.bip_avg_deg ** 2.0) / self.n
-        return mat, rs_degrees
-
-    def get_s_r_degrees(self):
-        """ Given two classes it returns a degree vector (indicator vector) where the degrees
-        have been calculated with respecto to each other set.
-        :param s: int, class s
-        :param r: int, class r
-        :returns: np.array, degree vector
-        """
-
-        s_r_degs = np.zeros(len(self.degrees), dtype='int16')
-
-        # Gets the indices of elements which are part of class s, then r
-        s_indices = np.where(self.classes == self.s)[0]
-        r_indices = np.where(self.classes == self.r)[0]
+        # Degree vector (indicator vector) where the degrees have been calculated with respect to each other set.
+        self.s_r_degrees = np.zeros(len(classes), dtype='uint16')
 
         # Calculates the degree and assigns it
-        s_r_degs[s_indices] = self.adj_mat[np.ix_(s_indices, r_indices)].sum(1)
-        s_r_degs[r_indices] = self.adj_mat[np.ix_(r_indices, s_indices)].sum(1)
+        self.s_r_degrees[self.s_indices] = adj_mat[np.ix_(self.s_indices, self.r_indices)].sum(1)
+        self.s_r_degrees[self.r_indices] = adj_mat[np.ix_(self.r_indices, self.s_indices)].sum(1)
 
-        return s_r_degs
+
+    def neighbourhood_deviation_matrix(self):
+
+        mat = self.bip_adj_mat.T @ self.bip_adj_mat
+        mat -= (self.bip_avg_deg ** 2.0) / self.classes_n
+        return mat
 
 
     def find_Yp(self, bip_degrees, s_indices):
@@ -104,7 +50,7 @@ class ClassesPair:
         :param s_indices: np.array(int32) array of the indices of class s
         :return: np.array(int32) subset of indices of class s 
         """
-        mask = np.abs(bip_degrees - self.bip_avg_deg) < ((self.epsilon ** 4.0) * self.n)
+        mask = np.abs(bip_degrees - self.bip_avg_deg) < ((self.epsilon ** 4.0) * self.classes_n)
         yp_i = np.where(mask == True)[0]
         return yp_i
 
@@ -125,7 +71,7 @@ class ClassesPair:
         rect_mat = nh_dev_mat[yp_i]
 
         # Check which set have the best neighbour deviation
-        boolean_matrix = rect_mat > (2 * self.epsilon**4 * self.n)
+        boolean_matrix = rect_mat > (2 * self.epsilon**4 * self.classes_n)
         cardinality_by0s = boolean_matrix.sum(1)
 
         # Select the best set
@@ -135,33 +81,27 @@ class ClassesPair:
         # Gets the y0 index
         y0 = s_indices[aux]
 
-        if cardinality_by0s[y0_idx] > (self.epsilon**4 * self.n / 4.0):
+        if cardinality_by0s[y0_idx] > (self.epsilon**4 * self.classes_n / 4.0):
             cert_s = s_indices[boolean_matrix[y0_idx]]
             return cert_s, y0
         else:
             return None, y0
 
 
+class WeightedClassesPair:
+    def __init__(self, sim_mat, adj_mat, classes, r, s, epsilon):
+        pass
 
+"""
 class WeightedClassesPair:
     bip_sim_mat = np.empty((0, 0), dtype='float32')
-    """The bipartite similarity matrix. Given a bipartite graph with classes r and s, the rows of this matrix represent
-       the nodes in r, while the columns the nodes in s."""
     bip_adj_mat = np.empty((0, 0), dtype='int8')
-    """The bipartite adjacency matrix. Given a bipartite graph with classes r and s, the rows of this matrix represent
-       the nodes in r, while the columns the nodes in s"""
     r = s = -1
-    """The classes composing the bipartite graph"""
     n = 0
-    """the cardinality of a class"""
     index_map = np.empty((0, 0))
-    """A mapping from the bipartite adjacency matrix nodes to the adjacency matrix ones"""
     bip_avg_deg = 0.0
-    """the average degree of the graph"""
     bip_density = 0.0
-    """the average density of the graph"""
     epsilon = 0.0
-    """the epsilon parameter"""
 
     def __init__(self, sim_mat, adj_mat, classes, r, s, epsilon):
         self.r = r
@@ -176,25 +116,12 @@ class WeightedClassesPair:
         self.epsilon = epsilon
 
     def bip_avg_degree(self):
-        """
-        compute the average degree of the bipartite graph
-        :return the average degree
-        """
         return (self.bip_sim_mat.sum(0) + self.bip_sim_mat.sum(1)).sum() / (2.0 * self.n)
 
     def compute_bip_density(self):
-        """
-        compute the density of a bipartite graph as the sum of the edges over the number of all possible edges in the
-        bipartite graph
-        :return the density
-        """
         return self.bip_sim_mat.sum() / (self.n ** 2.0)
 
     def classes_vertices_degrees(self):
-        """
-        compute the degree of all vertices in the bipartite graph
-        :return a (n,) numpy array containing the degree of each vertex
-        """
         c_v_degs = np.sum(self.bip_adj_mat, 0)
         c_v_degs = np.vstack((c_v_degs, np.sum(self.bip_adj_mat, 1)))
         return c_v_degs
@@ -235,12 +162,6 @@ class WeightedClassesPair:
         return Y_indices[np.abs(degrees - self.bip_avg_deg) < ((self.epsilon ** 4.0) * self.n)]
 
     def get_s_r_degrees(self):
-        """ Given two classes it returns a degree vector (indicator vector) where the degrees
-        have been calculated with respecto to each other set.
-        :param s: int, class s
-        :param r: int, class r
-        :returns: np.array, degree vector
-        """
 
         s_r_degs = np.zeros(len(self.degrees), dtype='int16')
 
@@ -274,3 +195,4 @@ class WeightedClassesPair:
         cert = list(self.index_map[0][indices])
         compl = [self.index_map[0][i] for i in range(self.n) if i not in indices]
         return cert, compl
+"""

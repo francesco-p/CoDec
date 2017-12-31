@@ -128,7 +128,7 @@ class SzemerediRegularityLemma:
                     self.certs_compls_list[r - 2].append([[[], []], [[], []]])
                     self.condition_verified[-1] += 1
 
-                index += cl_pair.compute_bip_density() ** 2.0
+                index += cl_pair.bip_density ** 2.0
 
         index *= (1.0 / self.k ** 2.0)
         self.index_vec.append(index)

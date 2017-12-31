@@ -13,7 +13,7 @@ def alon1(self, cl_pair):
     :return: A list of two empty lists representing the empty certificates
     :return: A list of two empty lists representing the empty complements
     """
-    return cl_pair.bip_avg_deg < (self.epsilon ** 3.0) * cl_pair.n, [[], []], [[], []]
+    return cl_pair.bip_avg_deg < (self.epsilon ** 3.0) * cl_pair.classes_n, [[], []], [[], []]
 
 
 
@@ -52,9 +52,9 @@ def alon2(self, cl_pair):
     s_indices = np.where(self.classes == cl_pair.s)[0]
     s_degrees = s_degrees[s_indices]
 
-    deviated_nodes_mask = np.abs(s_degrees - cl_pair.bip_avg_deg) >= (self.epsilon ** 4.0) * cl_pair.n
+    deviated_nodes_mask = np.abs(s_degrees - cl_pair.bip_avg_deg) >= (self.epsilon ** 4.0) * cl_pair.classes_n
 
-    if deviated_nodes_mask.sum() > (1/8 * self.epsilon**4 * cl_pair.n):
+    if deviated_nodes_mask.sum() > (1/8 * self.epsilon**4 * cl_pair.classes_n):
         # [TODO] Heuristic? Zip?
         s_certs = s_indices[deviated_nodes_mask]
         s_compls = np.setdiff1d(s_indices, s_certs)
@@ -82,7 +82,7 @@ def alon3(self, cl_pair):
     """
     is_irregular = False
 
-    nh_dev_mat, aux = cl_pair.neighbourhood_deviation_matrix()
+    nh_dev_mat = cl_pair.neighbourhood_deviation_matrix()
 
     # Gets the vector of degrees of nodes of class s wrt class r
     s_degrees = get_s_r_degrees(self, cl_pair.s, cl_pair.r)
