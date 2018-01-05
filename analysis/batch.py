@@ -69,7 +69,7 @@ for d in densities:
             #print(f"[+] Partition with the highest sze_idx k: {max_k} idx: {kec[max_k][2]:.4f}")
 
             ### 5. ###
-            sze_rec = s.reconstruct_mat(0, kec[max_k][1], max_k)
+            sze_rec = s.reconstruct_mat(d, kec[max_k][1], max_k)
 
             ### 6. ###
             l2_dist = s.L2_metric(sze_rec)

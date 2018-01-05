@@ -7,60 +7,41 @@ import ipdb
 
 
 class SzemerediRegularityLemma:
-    # methods required by the algorithm. User can provide its own implementations provided that they respect the input/output conventions
+    # Methods required by the algorithm
     partition_initialization = None
-    """The method used to build the initial partition"""
     refinement_step = None
-    """The method used to refine the current partition"""
     conditions = []
-    """The conditions used to check the regularity/irregularity of the pairs"""
 
-    # main data structure
+    # Main data structure
     sim_mat = np.empty((0, 0), dtype='float32')
-    """The similarity matrix representing the graph (used only if is_weighted is set to True)"""
     adj_mat = np.empty((0, 0), dtype='float32')
-    """The adjacency matrix representing the graph"""
     reduced_sim_mat = np.empty((0, 0), dtype='float32')
-    """the resulting similarity matrix"""
     classes = np.empty((0, 0), dtype='int16')
-    """array with size equal to the number of nodes in the graph. Each element is set to the class whose node belongs"""
     degrees = np.empty((0, 0), dtype='int16')
-    """array containing the indices of the nodes ordered by the degree"""
 
-    # main parameters of the algorithm
+    # Parameters of the algorithm
     N = 0
-    """number of nodes in the graph"""
     k = 0
-    """number of classes composing the partition"""
     classes_cardinality = 0
-    """cardinality of each class"""
     epsilon = 0.0
-    """epsilon parameter"""
-    index_vec = []
-    """index measuring the goodness of the partition"""
+    sze_idx = 0.0
 
-    # auxiliary structures used to keep track of the relation between the classes of the partition
+    # Auxiliary structures used to keep track of the relation between the classes of the partition
     certs_compls_list = []
     """structure containing the certificates and complements for each pair in the partition"""
     regularity_list = []
     """list of lists of size k, each element i contains the list of classes regular with class i"""
 
-    # flags to specify different behaviour of the algorithm
+    # Flags
     is_weighted = False
-    """flag to specify if the graph is weighted or not"""
     drop_edges_between_irregular_pairs = False
-    """flag to specify if the reduced matrix is fully connected or not"""
-
-    # debug structures
-    condition_verified = []
-    """this attribute is kept only for analysis purposes. For each iteration it stores the number of times that
-       condition 1/condition 2/condition 3/no condition has been verified"""
 
     def __init__(self, sim_mat, epsilon, is_weighted, drop_edges_between_irregular_pairs):
         if is_weighted:
             self.sim_mat = sim_mat
-        # [TODO] performance issue: int8 instead float32, no need to check if bigger than 0
-        self.adj_mat = (sim_mat > 0.0).astype('float32')
+        else:
+            self.adj_mat = sim_mat
+
         self.epsilon = epsilon
         self.N = self.adj_mat.shape[0]
         self.degrees = np.argsort(self.adj_mat.sum(0))
@@ -93,11 +74,9 @@ class SzemerediRegularityLemma:
                 the corresponding complement and certificate in the structure will be set to the empty lists
         :return num_of_irregular_pairs: the number of irregular pairs
         """
-        # debug structure
-        self.condition_verified = [0] * (len(self.conditions) + 1)
 
         num_of_irregular_pairs = 0
-        index = 0.0
+        self.sze_idx = 0.0
 
         for r in range(2, self.k + 1):
             self.certs_compls_list.append([])
@@ -120,18 +99,15 @@ class SzemerediRegularityLemma:
                         else:
                             self.regularity_list[r - 2].append(s)
 
-                        self.condition_verified[i] += 1
                         break
 
                 if not is_verified:
                     # if no condition was verified then consider the pair to be regular
                     self.certs_compls_list[r - 2].append([[[], []], [[], []]])
-                    self.condition_verified[-1] += 1
 
-                index += cl_pair.bip_density ** 2.0
+                self.sze_idx += cl_pair.bip_density ** 2.0
 
-        index *= (1.0 / self.k ** 2.0)
-        self.index_vec.append(index)
+        self.sze_idx *= (1.0 / self.k ** 2.0)
         return num_of_irregular_pairs
 
     def check_partition_regularity(self, num_of_irregular_pairs):
@@ -165,41 +141,38 @@ class SzemerediRegularityLemma:
             raise ValueError("incorrect compression rate. Only float greater than 0.0 are accepted")
 
         iteration = 0
-        
+
         self.partition_initialization(self, b)
-        
+
         while True:
             self.certs_compls_list = []
             self.regularity_list = []
-            self.condition_verified = [0] * len(self.conditions)
             iteration += 1
             num_of_irregular_pairs = self.check_pairs_regularity()
-            total_pairs = (self.k * (self.k - 1)) / 2.0
             #ipdb.set_trace()
 
             if self.check_partition_regularity(num_of_irregular_pairs):
                 if verbose:
-                    print("{0}, {1}, {2}, {3}, regular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))
-                    
+                    print("{0}, {1}, {2}, {3}, regular".format(iteration, self.k, self.classes_cardinality, self.sze_idx))
                 break
 
             if self.k >= max_k:
                 if verbose:
                     # Cardinality too low irregular by definition
-                    print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))
-                return (False, self.k, None, self.index_vec[-1])
-                
+                    print("{0}, {1}, {2}, {3}, irregular [Cardinality too low]".format(iteration, self.k, self.classes_cardinality, self.sze_idx))
+                return (False, self.k, None, self.sze_idx)
+
             if verbose:
-                print("{0}, {1}, {2}, {3} irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]) )        
+                print("{0}, {1}, {2}, {3} irregular".format(iteration, self.k, self.classes_cardinality, self.sze_idx) )
 
             res = self.refinement_step(self)
 
             if not res:
                 if verbose:
                     # Irregular by definition
-                    print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.index_vec[-1]))
-                return (False, self.k, None, self.index_vec[-1])
+                    print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.sze_idx))
+                return (False, self.k, None, self.sze_idx)
 
         #self.generate_reduced_sim_mat()
         #return (True, self.k, self.reduced_sim_mat)
-        return (True, self.k, self.classes, self.index_vec[-1])
+        return (True, self.k, self.classes, self.sze_idx)

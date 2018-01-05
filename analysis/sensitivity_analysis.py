@@ -49,10 +49,8 @@ class SensitivityAnalysis:
         self.sze_verbose = False
         self.compression = 0.05
 
-
         # Reconstruction parameters
         self.indensity_preservation = False
-
 
         # Matlab eng
         self.eng = None
@@ -187,10 +185,38 @@ class SensitivityAnalysis:
         for thresh in thresholds:
             sze_rec = self.reconstruct_mat(thresh, classes, k)
             res = measure(sze_rec)
+
+            self.plot_graphs(self.G, sze_rec, thresh)
+
             if self.verbose:
                 print(f"    {res:.5f}")
+                res2 = self.L1_metric(sze_rec)
+                print(f"    l1{res2:.5f}")
             self.measures.append(res)
         return self.measures
+
+
+
+
+    def plot_graphs(self, graph, sze, t):
+        """ Plot graph vs sze side by side
+        """
+
+        plt.subplot(1, 3, 1)
+        plt.imshow(graph)
+        plt.title("G")
+
+        plt.subplot(1, 3, 2)
+        plt.imshow(sze)
+        plt.title(f"sze_rec t:{t}")
+
+        plt.subplot(1, 3, 3)
+        plt.imshow(np.abs(sze-1))
+        plt.title("not sze_rec")
+
+        plt.show()
+
+
 
 
     def reconstruct_mat(self, thresh, classes, k):
@@ -292,6 +318,15 @@ class SensitivityAnalysis:
         :returns: float, L2 norm
         """
         return np.linalg.norm(self.G-graph)/self.G.shape[0]
+
+
+    def L1_metric(self, graph):
+        """ Compute the normalized L1 distance between two matrices
+        :param graph: np.array, reconstructed graph
+        :returns: float, L2 norm
+        """
+        return (np.abs(graph - self.G)/self.G.shape[0]**2).sum()
+
 
 
     def ACT_metric(self, graph):

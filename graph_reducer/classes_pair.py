@@ -40,6 +40,7 @@ class ClassesPair:
     def neighbourhood_deviation_matrix(self):
 
         mat = self.bip_adj_mat.T @ self.bip_adj_mat
+        mat = mat.astype('float32')
         mat -= (self.bip_avg_deg ** 2.0) / self.classes_n
         return mat
 

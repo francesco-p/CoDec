@@ -17,6 +17,7 @@ Indentation : 4spaces
 from sensitivity_analysis import SensitivityAnalysis
 import numpy as np
 import matplotlib.pyplot as plt
+import ipdb
 
 def check_validity(G, n, desired_d):
     """ Checks dimension and data type of the graph to reduce space consumption
@@ -38,6 +39,34 @@ def synthetic_graph(n, d):
     G = np.tril(np.random.random((n, n)) <= d, -1).astype('int8')
     return G + G.T
 
+def synthethic_cheese_graph(n):
+    """ Generate a n,n cheese-style (with holes) graph of a given density d
+    :param d: float density of the graph
+    :return: np.array((n, n), dtype='float32') graph with density d
+    """
+
+    l = [x for x in range(0,n+1)]
+
+    groups = zip(l[::5], l[1::5], l[2::5], l[3::5], l[4::5])
+    groups = list(groups)
+
+    a = np.array(groups[::2]).flatten()
+    b = np.array(groups[1::2]).flatten()
+
+    mat = np.ones((n,n))
+
+    mat[np.ix_(a, b)] = 0
+    mat += mat.T
+    mat[np.where(mat == 1)] = 0
+    mat /= 2
+
+    np.fill_diagonal(mat, 0)
+
+    return mat
+    #print(mat)
+    #plt.imshow(mat)
+    #plt.show()
+
 
 def density(G):
     """ Check density of a synthetic graph
@@ -47,6 +76,7 @@ def density(G):
     n = G.shape[0]
     e = np.where(G == 1)[0].size / 2
     return e / ((n*(n-1))/2)
+
 
 def plot_graphs(graph, sze):
     """ Plot graph vs sze side by side
@@ -68,11 +98,14 @@ def plot_graphs(graph, sze):
 ######################################################
 
 ### 1. Fix density d and size of the graph n ###
-n = 100
-d = 0.55
-
+n = 10000
+d = 0.85
 G = synthetic_graph(n, d)
 check_validity(G, n, d)
+
+#G = np.dot(G,G)
+#G = synthethic_cheese_graph(n)
+#d = density(G)
 
 ### 2. Prepares structure for the sensitivity analysis ###
 data = {}
@@ -118,15 +151,43 @@ else:
     print(f"[+] Partition with the highest sze_idx k: {max_k} idx: {keci[max_k][2]:.4f}")
 
     ### 7. Recunstruction ###
-    threshold = 0
+    threshold = d - 0.03
     classes = keci[max_k][1]
-    print(f"[+] Reconstruction with threshold: {threshold}")
-    sze_rec = s.reconstruct_mat(threshold, classes, max_k)
 
-    ### To show the G vs. sze_rec ###
-    plot_graphs(G, sze_rec)
+    ipdb.set_trace()
+    G = G.astype("float64")
+    G_2 = G @ G
+    G_3 = G_2 @ G
+    G_n_triangles = np.trace(G_3) / 6.0
 
-    ### 8. Calculate a distance ###
-    dist = s.L2_metric(sze_rec)
-    print(f"[+] Distance: {dist}")
+    for k in keci.keys():
+        print(f"[+] Partition k:{k}")
+        classes = keci[k][1]
+
+        #s.thresholds_analysis(classes, k, np.arange(0.25, 0.45, 0.02), s.L2_metric)
+        print(f"  [+] Reconstruction with threshold: {threshold}")
+        sze_rec = s.reconstruct_mat(threshold, classes, max_k)
+
+        # Count the number of triangles
+        sze_rec = sze_rec.astype("float64") # stackoverflow.com/questions/39602404/numpy-matrix-exponentiation-gives-negative-value 
+
+        sze_2 = sze_rec @ sze_rec
+        sze_3 = sze_2 @ sze_rec
+
+        sze_n_triangles = np.trace(sze_3) / 6.0
+
+        tott = sze_n_triangles / G_n_triangles
+        print(f"N triangles:\n  sze: {sze_n_triangles}   G: {G_n_triangles} tott: {tott:.2f}")
+
+        plt.plot(sorted(np.diagonal(sze_2)))
+        plt.plot(sorted(np.diagonal(G_2)))
+        plt.show()
+
+        ### To show the G vs. sze_rec ###
+        plot_graphs(G, sze_rec)
+
+        ### 8. Calculate a distance ###
+        dist1 = s.L1_metric(sze_rec)
+        dist2 = s.L2_metric(sze_rec)
+        print(f"  [+] Distance: L1:{dist1}  L2:{dist2}")
 
