@@ -160,7 +160,7 @@ class SzemerediRegularityLemma:
                 if verbose:
                     # Cardinality too low irregular by definition
                     print("{0}, {1}, {2}, {3}, irregular [Cardinality too low]".format(iteration, self.k, self.classes_cardinality, self.sze_idx))
-                return (False, self.k, None, self.sze_idx)
+                return (False, self.k, None, self.sze_idx, self.regularity_list)
 
             if verbose:
                 print("{0}, {1}, {2}, {3} irregular".format(iteration, self.k, self.classes_cardinality, self.sze_idx) )
@@ -171,8 +171,9 @@ class SzemerediRegularityLemma:
                 if verbose:
                     # Irregular by definition
                     print("{0}, {1}, {2}, {3}, irregular".format(iteration, self.k, self.classes_cardinality, self.sze_idx))
-                return (False, self.k, None, self.sze_idx)
+                return (False, self.k, None, self.sze_idx, self.regularity_list)
 
         #self.generate_reduced_sim_mat()
         #return (True, self.k, self.reduced_sim_mat)
-        return (True, self.k, self.classes, self.sze_idx)
+        #ipdb.set_trace()
+        return (True, self.k, self.classes, self.sze_idx, self.regularity_list)

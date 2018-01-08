@@ -94,7 +94,7 @@ class SensitivityAnalysis:
             return epsilon2
         else:
             epsilon_middle = epsilon1 + step
-            regular, k, classes, sze_idx = self.run_alg(epsilon_middle)
+            regular, k, classes, sze_idx, reg_list = self.run_alg(epsilon_middle)
             if self.verbose:
                 print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}| {k} {regular}")
 
@@ -122,7 +122,7 @@ class SensitivityAnalysis:
             return epsilon2
         else:
             epsilon_middle = epsilon1 + step
-            regular, k, classes, sze_idx = self.run_alg(epsilon_middle)
+            regular, k, classes, sze_idx, reg_list = self.run_alg(epsilon_middle)
             if self.verbose:
                 print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}| {k} {regular}")
             if regular:
@@ -166,11 +166,11 @@ class SensitivityAnalysis:
         """
         self.k_e_c_i= {}
         for epsilon in self.epsilons:
-            regular, k, classes, sze_idx = self.run_alg(epsilon)
+            regular, k, classes, sze_idx, reg_list = self.run_alg(epsilon)
             if self.verbose:
                 print(f"    {epsilon:.6f} {k} {regular} {sze_idx:.4f}")
             if (k not in self.k_e_c_i) and regular:# and k!=2:
-                self.k_e_c_i[k] = (epsilon, classes, sze_idx)
+                self.k_e_c_i[k] = (epsilon, classes, sze_idx, reg_list)
         return self.k_e_c_i
 
 
@@ -186,7 +186,7 @@ class SensitivityAnalysis:
             sze_rec = self.reconstruct_mat(thresh, classes, k)
             res = measure(sze_rec)
 
-            self.plot_graphs(self.G, sze_rec, thresh)
+            #self.plot_graphs(self.G, sze_rec, thresh)
 
             if self.verbose:
                 print(f"    {res:.5f}")
@@ -199,9 +199,8 @@ class SensitivityAnalysis:
 
 
     def plot_graphs(self, graph, sze, t):
-        """ Plot graph vs sze side by side
+        """ Debug utility
         """
-
         plt.subplot(1, 3, 1)
         plt.imshow(graph)
         plt.title("G")
@@ -217,9 +216,7 @@ class SensitivityAnalysis:
         plt.show()
 
 
-
-
-    def reconstruct_mat(self, thresh, classes, k):
+    def reconstruct_mat(self, thresh, classes, k, regularity_list):
         """ Reconstruct the original matrix from a reduced one.
         :param thres: the edge threshold if the density between two pairs is over it we put an edge
         :param classes: the reduced graph expressed as an array
@@ -228,7 +225,9 @@ class SensitivityAnalysis:
         reconstructed_mat = np.zeros((self.G.shape[0], self.G.shape[0]), dtype='float32')
         for r in range(2, k + 1):
             r_nodes = np.where(classes == r)[0]
-            for s in range(1, r):
+
+            for s in range(1, r) if not self.drop_edges_between_irregular_pairs else regularity_list[r - 2]:
+                s += 1
                 s_nodes = np.where(classes == s)[0]
                 bip_sim_mat = self.G[np.ix_(r_nodes, s_nodes)]
                 n = bip_sim_mat.shape[0]
@@ -249,11 +248,14 @@ class SensitivityAnalysis:
                 max_edges = (n*(n-1))/2
                 n_edges = np.tril(self.G[np.ix_(indices_c, indices_c)], -1).sum()
                 indensity = n_edges / max_edges
-                if np.random.uniform(0,1,1) <= indensity:
+                if np.random.uniform(0,1,1) <= indensity: 
                     if self.is_weighted:
+                        # [TODO] wrong implementation
                         reconstructed_mat[np.ix_(indices_c, indices_c)] = indensity
                     else:
-                        reconstructed_mat[np.ix_(indices_c, indices_c)] = 1
+                        erg = np.tril(np.random.random((n, n)) <= indensity, -1).astype('float32')
+                        erg += erg.T
+                        reconstructed_mat[np.ix_(indices_c, indices_c)] = erg
 
         np.fill_diagonal(reconstructed_mat, 0.0)
         return reconstructed_mat

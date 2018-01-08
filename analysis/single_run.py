@@ -77,9 +77,21 @@ def density(G):
     e = np.where(G == 1)[0].size / 2
     return e / ((n*(n-1))/2)
 
+def best_partition(keci):
+    """ Selects the best partition (highest sze_idx)
+    """
+    max_idx = -1
+    max_k = -1
 
-def plot_graphs(graph, sze):
-    """ Plot graph vs sze side by side
+    for k in keci.keys():
+        if keci[k][2] > max_idx:
+            max_k = k
+            max_idx = keci[k][2]
+
+    return max_k
+
+def plot_graphs(graph, sze, k):
+    """ Plot the original graph vs sze_rec side by side
     """
 
     plt.subplot(1, 2, 1)
@@ -88,7 +100,7 @@ def plot_graphs(graph, sze):
 
     plt.subplot(1, 2, 2)
     plt.imshow(sze)
-    plt.title("sze_rec")
+    plt.title(f"sze_rec, k={k}")
 
     plt.show()
 
@@ -98,8 +110,10 @@ def plot_graphs(graph, sze):
 ######################################################
 
 ### 1. Fix density d and size of the graph n ###
-n = 10000
+n = 6000
 d = 0.85
+refinement_type = 'indeg_guided' # or 'degree_based'
+
 G = synthetic_graph(n, d)
 check_validity(G, n, d)
 
@@ -110,27 +124,25 @@ check_validity(G, n, d)
 ### 2. Prepares structure for the sensitivity analysis ###
 data = {}
 data['G'] = G
+
 # Not useful with synthetic graphs
 data['GT'] = []
 data['bounds'] = []
 data['labels'] = []
 
 ### 3. Instantiate the analysis class ###
-s = SensitivityAnalysis(data, 'indeg_guided')
+s = SensitivityAnalysis(data, refinement_type)
+
 s.verbose = True
+s.drop_edges_between_irregular_pairs = True
+s.indensity_preservation = True
 
 ### 4. Find bounds ###
-# Returns a list
-#   bounds[0] = epsilon edge, bounds[1] = epsilon trivial
 print(f"[+] Finding bounds ...")
 bounds = s.find_bounds()
 
 ### 5. Find partitions inside bounds ###
-# Returns a dictionary of 3-uples
-#   {k: (epsilon, classes array, sze_idx), ...}
-# ex:
-#   {'128': (0.45735, np.array[1,3,2,3,4,1,1,2, ...], 0.253 ), '256':...}
-print(f"[+] Finding partitions ...")
+print(f"[+] Finding partitions ...eps k regularity sze_idx")
 keci = s.find_partitions()
 
 if keci == {}:
@@ -139,37 +151,32 @@ if keci == {}:
 else:
     print(f"[+] {len(keci.keys())} partitions found")
 
-    ### 6. Select the partition with the highest sze_idx ###
-    max_idx = -1
-    max_k = -1
-
-    for k in keci.keys():
-        if keci[k][2] > max_idx:
-            max_k = k
-            max_idx = keci[k][2]
-
-    print(f"[+] Partition with the highest sze_idx k: {max_k} idx: {keci[max_k][2]:.4f}")
+    #max_k = best_partition(keci)
+    #print(f"[+] Partition with the highest sze_idx k: {max_k} idx: {keci[max_k][2]:.4f}")
 
     ### 7. Recunstruction ###
-    threshold = d - 0.03
-    classes = keci[max_k][1]
+    print(f"[+] Reconstruction and plot for each unique partition")
 
-    ipdb.set_trace()
+    # Good practice
+    threshold = d - 0.03
+
+    # Precalculation
     G = G.astype("float64")
     G_2 = G @ G
     G_3 = G_2 @ G
     G_n_triangles = np.trace(G_3) / 6.0
 
     for k in keci.keys():
-        print(f"[+] Partition k:{k}")
+        print(f"[*] Partition k:{k}")
         classes = keci[k][1]
 
         #s.thresholds_analysis(classes, k, np.arange(0.25, 0.45, 0.02), s.L2_metric)
-        print(f"  [+] Reconstruction with threshold: {threshold}")
-        sze_rec = s.reconstruct_mat(threshold, classes, max_k)
+        print(f"    Reconstruction with threshold: {threshold}")
+        sze_rec = s.reconstruct_mat(threshold, classes, k, keci[k][3])
 
         # Count the number of triangles
-        sze_rec = sze_rec.astype("float64") # stackoverflow.com/questions/39602404/numpy-matrix-exponentiation-gives-negative-value 
+        # stackoverflow.com/questions/39602404/numpy-matrix-exponentiation-gives-negative-value
+        sze_rec = sze_rec.astype("float64")
 
         sze_2 = sze_rec @ sze_rec
         sze_3 = sze_2 @ sze_rec
@@ -177,17 +184,20 @@ else:
         sze_n_triangles = np.trace(sze_3) / 6.0
 
         tott = sze_n_triangles / G_n_triangles
-        print(f"N triangles:\n  sze: {sze_n_triangles}   G: {G_n_triangles} tott: {tott:.2f}")
+        print(f"    Triangles  sze: {sze_n_triangles}   G: {G_n_triangles} sze/G: {tott:.2f}")
 
-        plt.plot(sorted(np.diagonal(sze_2)))
-        plt.plot(sorted(np.diagonal(G_2)))
+        # Plot degree distribution
+        plt.plot(sorted(np.diagonal(sze_2)), label=f"sze_rec k={k}")
+        plt.plot(sorted(np.diagonal(G_2)), label="G")
+        plt.title("Degree distribution")
+        plt.legend()
         plt.show()
 
         ### To show the G vs. sze_rec ###
-        plot_graphs(G, sze_rec)
+        plot_graphs(G, sze_rec, k)
 
-        ### 8. Calculate a distance ###
+        ### 8. Calculate distances ###
         dist1 = s.L1_metric(sze_rec)
         dist2 = s.L2_metric(sze_rec)
-        print(f"  [+] Distance: L1:{dist1}  L2:{dist2}")
+        print(f"    Distance: L1:{dist1:.4f}  L2:{dist2:.4f}")
 
