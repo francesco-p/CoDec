@@ -121,6 +121,7 @@ check_validity(G, n, d)
 #G = synthethic_cheese_graph(n)
 #d = density(G)
 
+
 ### 2. Prepares structure for the sensitivity analysis ###
 data = {}
 data['G'] = G
@@ -136,6 +137,7 @@ s = SensitivityAnalysis(data, refinement_type)
 s.verbose = True
 s.drop_edges_between_irregular_pairs = True
 s.indensity_preservation = True
+s.is_weighted = False
 
 ### 4. Find bounds ###
 print(f"[+] Finding bounds ...")

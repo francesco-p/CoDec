@@ -39,6 +39,7 @@ class SzemerediRegularityLemma:
     def __init__(self, sim_mat, epsilon, is_weighted, drop_edges_between_irregular_pairs):
         if is_weighted:
             self.sim_mat = sim_mat
+            self.adj_mat = (sim_mat > 0).astype("int8")
         else:
             self.adj_mat = sim_mat
 
@@ -46,7 +47,7 @@ class SzemerediRegularityLemma:
         self.N = self.adj_mat.shape[0]
         self.degrees = np.argsort(self.adj_mat.sum(0))
 
-        # flags
+        # Flags
         self.is_weighted = is_weighted
         self.drop_edges_between_irregular_pairs = drop_edges_between_irregular_pairs
 

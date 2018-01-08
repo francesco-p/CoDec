@@ -329,6 +329,12 @@ class SensitivityAnalysis:
         """
         return (np.abs(graph - self.G)/self.G.shape[0]**2).sum()
 
+    def L2_metric_GT(self, graph):
+        return np.linalg.norm(self.GT-graph)/self.GT.shape[0]
+
+
+    def L1_metric_GT(self, graph):
+        return (np.abs(graph - self.GT)/self.GT.shape[0]**2).sum()
 
 
     def ACT_metric(self, graph):
