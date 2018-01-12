@@ -8,7 +8,7 @@ Author: lakj
 import numpy as np
 import matplotlib.pyplot as plt
 #import matlab.engine we need to install it for the virtualenv
-import ipdb
+#import ipdb
 import scipy.stats as spst
 from sklearn import metrics
 import sys
@@ -29,6 +29,7 @@ class SensitivityAnalysis:
         self.min_step = 0.0001 #0.00001
         self.tries = 20
 
+        self.epsilons = []
 
         # SZE algorithm parameters
         self.kind = "alon"
@@ -94,7 +95,7 @@ class SensitivityAnalysis:
             return epsilon2
         else:
             epsilon_middle = epsilon1 + step
-            regular, k, classes, sze_idx, reg_list = self.run_alg(epsilon_middle)
+            regular, k, classes, sze_idx, reg_list , nirr = self.run_alg(epsilon_middle)
             if self.verbose:
                 print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}| {k} {regular}")
 
@@ -103,6 +104,7 @@ class SensitivityAnalysis:
                     del self.srla
                     return self.find_trivial_epsilon(epsilon1, epsilon_middle)
                 if k>self.min_k: # could be an else
+                    #self.epsilons.append(epsilon_middle)
                     del self.srla
                     return self.find_trivial_epsilon(epsilon_middle, epsilon2)
                 else:
@@ -122,10 +124,12 @@ class SensitivityAnalysis:
             return epsilon2
         else:
             epsilon_middle = epsilon1 + step
-            regular, k, classes, sze_idx, reg_list = self.run_alg(epsilon_middle)
+            regular, k, classes, sze_idx, reg_list, nirr= self.run_alg(epsilon_middle)
             if self.verbose:
                 print(f"    |{epsilon1:.6f}-----{epsilon_middle:.6f}------{epsilon2:.6f}| {k} {regular}")
             if regular:
+                #if k>self.min_k :
+                    #self.epsilons.append(epsilon_middle)
                 del self.srla
                 return self.find_edge_epsilon(epsilon1, epsilon_middle)
             else:
@@ -151,7 +155,7 @@ class SensitivityAnalysis:
             if self.verbose:
                 print(f"    Edge epsilon candidate: {epsilon1:.6f}")
         self.bounds = [epsilon1, epsilon2]
-        self.epsilons = [epsilon1]
+        self.epsilons.append(epsilon1)
         # Try self.tries different epsilons inside the bounds
         offs = (epsilon2 - epsilon1) / self.tries
         for i in range(1, self.tries+1):
@@ -162,19 +166,85 @@ class SensitivityAnalysis:
 
     def find_partitions(self):
         """ Find partitions of the graph
-        :returns: a dictionary with the cardinality of the partition, the corresponding epsilon, the classes reduced array and the szemeredi index
+        :returns: a dictionary
         """
         self.k_e_c_i= {}
         for epsilon in self.epsilons:
-            regular, k, classes, sze_idx, reg_list = self.run_alg(epsilon)
+            regular, k, classes, sze_idx, reg_list , nirr= self.run_alg(epsilon)
+
             if self.verbose:
                 print(f"    {epsilon:.6f} {k} {regular} {sze_idx:.4f}")
-            if (k not in self.k_e_c_i) and regular:# and k!=2:
-                self.k_e_c_i[k] = (epsilon, classes, sze_idx, reg_list)
+
+            if regular:
+                if k in self.k_e_c_i:
+                    if epsilon < self.k_e_c_i[k][0]: #sze_idx or epsilon?
+                        self.k_e_c_i[k] = (epsilon, classes, sze_idx, reg_list, nirr)
+                else:
+                    self.k_e_c_i[k] = (epsilon, classes, sze_idx, reg_list, nirr)
+
         return self.k_e_c_i
 
+    def find_bestL2_partitions(self):
+        min_l2 = 2
+        min_partition = None
+        #self.epsilons.append(0.218750)
+        for epsilon in self.epsilons:
 
-    def thresholds_analysis(self, classes, k, thresholds, measure):
+            regular, k, classes, sze_idx, reg_list , nirr= self.run_alg(epsilon)
+
+            if regular:
+
+                sze_rec = self.reconstruct_mat(0, classes, k, reg_list)
+                dist2 = self.L2_metric_GT(sze_rec)
+                dist1 = self.L1_metric_GT(sze_rec)
+
+                if dist2 < min_l2:
+                    min_l2 = dist2
+                    min_partition = (epsilon, classes, sze_idx, reg_list, sze_rec, k, dist2, dist1)
+                    print(f"    Distance: L1wrtGT :{dist1:.4f}  L2wrtGT :{dist2:.4f}")
+                    print("     New BEST!")
+
+        return min_partition
+
+
+    def find_bestL2_partitions_threshold(self, density):
+        min_l2 = 2
+        min_partition = None
+        #self.epsilons.append(0.218750)
+        for epsilon in self.epsilons:
+            print(f"eps: {epsilon:.4f}")
+
+            regular, k, classes, sze_idx, reg_list , nirr= self.run_alg(epsilon)
+
+            if regular and k>30:
+                #print(f"    {epsilon:.6f} {k} {regular} {sze_idx:.4f}")
+
+                t_max = -1
+                t_sze_rec = None
+                t_dist2_min = 10
+                print(f"density:{density}")
+                for t in np.arange(0, density, 0.0005):
+                    sze_rec = self.reconstruct_mat(t, classes, k, reg_list)
+                    dist2 = self.L2_metric_GT(sze_rec)
+                    print(f"t:{t:.2f} - L2:{dist2:.4f}")
+
+                    if dist2 < t_dist2_min:
+                        t_max = t
+                        t_sze_rec = sze_rec
+
+                dist2 = self.L2_metric_GT(t_sze_rec)
+                dist1 = self.L1_metric_GT(t_sze_rec)
+
+                if dist2 < min_l2:
+                    min_l2 = dist2
+                    min_partition = (epsilon, classes, sze_idx, reg_list, t_sze_rec, k, dist2, dist1)
+                    print(f"    Distance: L1wrtGT :{dist1:.4f}  L2wrtGT :{dist2:.4f}")
+                    print("     New BEST!")
+
+        return min_partition
+
+
+    def thresholds_analysis(self, classes, k, reg_list, thresholds, measure):
         """ Performs threshold analysis with a given measure
         :param classes: the reduced array
         :param k: the cardinality of the patition
@@ -183,44 +253,50 @@ class SensitivityAnalysis:
         """
         self.measures = []
         for thresh in thresholds:
-            sze_rec = self.reconstruct_mat(thresh, classes, k)
+            sze_rec = self.reconstruct_mat(thresh, classes, k, reg_list)
             res = measure(sze_rec)
 
             #self.plot_graphs(self.G, sze_rec, thresh)
 
             if self.verbose:
                 print(f"    {res:.5f}")
-                res2 = self.L1_metric(sze_rec)
-                print(f"    l1{res2:.5f}")
             self.measures.append(res)
+
         return self.measures
 
 
 
+    def reconstruct_mat_trick(self, thresh, classes, k, regularity_list):
+        reconstructed_mat = np.zeros((self.G.shape[0], self.G.shape[0]), dtype='float32')
 
-    def plot_graphs(self, graph, sze, t):
-        """ Debug utility
-        """
-        plt.subplot(1, 3, 1)
-        plt.imshow(graph)
-        plt.title("G")
+        # Implements indensity information preservation
 
-        plt.subplot(1, 3, 2)
-        plt.imshow(sze)
-        plt.title(f"sze_rec t:{t}")
+        for i in range(1, k+1):
+            print(i)
+            reconstructed_mat = np.zeros((self.G.shape[0], self.G.shape[0]), dtype='float32')
+            for c in range(i, i+1):
+                indices_c = np.where(classes == c)[0]
+                n = len(indices_c)
+                max_edges = (n*(n-1))/2
+                n_edges = np.tril(self.G[np.ix_(indices_c, indices_c)], -1).sum()
+                indensity = n_edges / max_edges
+                reconstructed_mat[np.ix_(indices_c, indices_c)] = 1#indensity
 
-        plt.subplot(1, 3, 3)
-        plt.imshow(np.abs(sze-1))
-        plt.title("not sze_rec")
+            plt.imshow(reconstructed_mat)
+            plt.savefig(f"/tmp/classe_{i}.png")
 
-        plt.show()
-
+        np.fill_diagonal(reconstructed_mat, 0.0)
+        return reconstructed_mat
 
     def reconstruct_mat(self, thresh, classes, k, regularity_list):
         """ Reconstruct the original matrix from a reduced one.
         :param thres: the edge threshold if the density between two pairs is over it we put an edge
         :param classes: the reduced graph expressed as an array
         :return: a numpy matrix of the size of GT
+
+        -----
+        [TODO BUG] wrong implementation on weighted case indensity preservation
+
         """
         reconstructed_mat = np.zeros((self.G.shape[0], self.G.shape[0]), dtype='float32')
         for r in range(2, k + 1):
@@ -248,9 +324,9 @@ class SensitivityAnalysis:
                 max_edges = (n*(n-1))/2
                 n_edges = np.tril(self.G[np.ix_(indices_c, indices_c)], -1).sum()
                 indensity = n_edges / max_edges
-                if np.random.uniform(0,1,1) <= indensity: 
+                if np.random.uniform(0,1,1) <= indensity:
                     if self.is_weighted:
-                        # [TODO] wrong implementation
+                        # [TODO BUG] wrong implementation
                         reconstructed_mat[np.ix_(indices_c, indices_c)] = indensity
                     else:
                         erg = np.tril(np.random.random((n, n)) <= indensity, -1).astype('float32')
@@ -260,6 +336,34 @@ class SensitivityAnalysis:
         np.fill_diagonal(reconstructed_mat, 0.0)
         return reconstructed_mat
 
+    def generate_reduced_sim_mat(self, k, epsilon, classes, regularity_list):
+        """
+        generate the similarity matrix of the current classes
+        :return sim_mat: the reduced similarity matrix
+        """
+        reduced_sim_mat = np.zeros((k, k), dtype='float32')
+
+        for r in range(2, k + 1):
+
+            for s in (range(1, r) if not self.drop_edges_between_irregular_pairs else regularity_list[r - 2]):
+
+                # Classes indices w.r.t. original graph uint16 from 0 to 65535
+                s_indices = np.where(classes == s)[0].astype('uint16')
+                r_indices = np.where(classes == r)[0].astype('uint16')
+
+                if self.is_weighted:
+
+                    adj_mat = (self.G > 0).astype("int8")
+                    bip_adj_mat = adj_mat[np.ix_(s_indices, r_indices)]
+
+                else:
+                    bip_adj_mat = self.G[np.ix_(s_indices, r_indices)]
+
+                classes_n = bip_adj_mat.shape[0]
+                bip_density = bip_adj_mat.sum() / (classes_n ** 2.0)
+                reduced_sim_mat[r - 1, s - 1] = reduced_sim_mat[s - 1, r - 1] = bip_density
+
+        return reduced_sim_mat
 
     #################
     #### Metrics ####
@@ -272,6 +376,19 @@ class SensitivityAnalysis:
         :returns: np.array(float64) feature vector of measures
         """
         pass
+
+    def KLdivergence_metric_GT(self, graph):
+        """ Computes thhe kulback liebeler divergence
+        :param graph: np.array() reconstructed graph
+        :returns: np.array(float64) feature vector of measures
+        """
+        p1 = self.GT.sum(0)
+        p2 = graph.sum(0)
+
+        e1 = spst.entropy(p1, p2)
+        e2 = spst.entropy(p2, p1)
+
+        return e1, e2
 
     def KLdivergence_metric(self, graph):
         """ Computes thhe kulback liebeler divergence
@@ -293,26 +410,62 @@ class SensitivityAnalysis:
         :returns: adjusted random score
         """
         n = len(self.labels)
-        k = 9
-        candidates = np.zeros(n, dtype='int16')
-        i = 0
-        for row in graph:
-            max_k_idxs = row.argsort()[-k:]
-            aux = row[max_k_idxs] > 0
-            k_indices = max_k_idxs[aux]
 
-            if len(k_indices) == 0:
-                k_indices = row.argsort()[-1:]
+        max_ars = -10
 
-            #candidate_lbl = np.bincount(self.labels[k_indices].astype(int)).argmax()
-            candidate_lbl = np.bincount(self.labels[k_indices]).argmax()
-            candidates[i] = candidate_lbl
-            i += 1
+        for k in [3, 5, 7, 9, 10, 15]:
+            candidates = np.zeros(n, dtype='int16')
+            i = 0
+            for row in graph:
+                max_k_idxs = row.argsort()[-k:]
+                aux = row[max_k_idxs] > 0
+                k_indices = max_k_idxs[aux]
 
-        ars = metrics.adjusted_rand_score(self.labels, candidates)
+                if len(k_indices) == 0:
+                    k_indices = row.argsort()[-1:]
 
-        return ars
+                #candidate_lbl = np.bincount(self.labels[k_indices].astype(int)).argmax()
+                candidate_lbl = np.bincount(self.labels[k_indices]).argmax()
+                candidates[i] = candidate_lbl
+                i += 1
 
+            ars = metrics.adjusted_rand_score(self.labels, candidates)
+            if ars > max_ars:
+                max_k = k
+                max_ars = ars
+
+        return max_ars
+
+    def RED_KVS_metric(self, graph, labels):
+        """ Implements Knn Voting System to calculate if the labeling is correct.
+        :param graph: reconstructed graph
+        :returns: adjusted random score
+        """
+        n = graph.shape[0]
+
+        max_ars = -10
+
+        for k in [3, 5, 7, 9, 10, 15]:
+            candidates = np.zeros(n, dtype='int16')
+            i = 0
+            for row in graph:
+                max_k_idxs = row.argsort()[-k:]
+                aux = row[max_k_idxs] > 0
+                k_classes = max_k_idxs[aux]
+
+                if len(k_classes) == 0:
+                    k_classes = row.argsort()[-1:]
+
+                candidate_lbl = np.bincount(labels[k_classes]).argmax()
+                candidates[i] = candidate_lbl
+                i += 1
+
+            ars = metrics.adjusted_rand_score(self.labels, candidates)
+            if ars > max_ars:
+                max_k = k
+                max_ars = ars
+
+        return max_ars
 
     def L2_metric(self, graph):
         """ Compute the normalized L2 distance between two matrices
