@@ -7,7 +7,7 @@ Indentation : 4spaces
 from sensitivity_analysis import SensitivityAnalysis
 import numpy as np
 import matplotlib.pyplot as plt
-@import ipdb
+#import ipdb
 import process_datasets as pd
 import putils as pu
 
@@ -34,8 +34,8 @@ def best_partition(keci):
 
 
 #for internoise_lvl in [0.1, 0.3, 0.5, 0.7]:
-n = 1000
-internoise = np.arange(0, 1, 0.01) 
+n = 100
+internoise = np.arange(0, 1, 0.03) 
 
 l2_GT = []
 l2_G = []
@@ -44,7 +44,7 @@ kld = []
 kld_GT = []
 
 
-for intranoise_lvl in [0.3]:
+for intranoise_lvl in [0]:
 
     for internoise_lvl in internoise: #[0.05]
 
@@ -114,14 +114,14 @@ plt.ylabel('L2')
 plt.xlabel('Internoise')
 plt.grid()
 plt.legend(loc='lower right')
-plt.savefig(f"/tmp/{n}_l2.png")
+plt.savefig(f"./imgs/{n}_l2.png")
 
 # Plot
+plt.figure()
 plt.plot(internoise, ari)
 plt.title(f"N:{n}")
 plt.ylabel('Adj Rand Idx')
 plt.xlabel('Internoise')
 plt.grid()
-plt.legend(loc='lower right')
-plt.savefig(f"/tmp/{n}_ari.png")
+plt.savefig(f"./imgs/{n}_ari.png")
 
