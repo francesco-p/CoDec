@@ -26,7 +26,7 @@ class SensitivityAnalysis:
 
         # Find bounds parameters
         self.min_k = 4
-        self.min_step = 0.0001 #0.00001
+        self.min_step = 0.01#0.0001 #0.00001
         self.tries = 20
 
         self.epsilons = []

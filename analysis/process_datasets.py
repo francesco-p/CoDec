@@ -4,15 +4,14 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-import sys
 
 
-def check_validity(G, n, desired_d):
+def check_validity(G, n, desired_d, desired_dtype):
     """ Checks dimension and data type of the graph to reduce space consumption
     Checks that the density is in desired_density +/- tolerance
     """
     assert G.shape[0] == n, "Dimension is not correct"
-    assert G.dtype == 'int8', "Data type of the graph is not correct"
+    assert G.dtype == desired_dtype, "Data type of the graph is not correct"
     tolerance = 0.015
     desired_d = round(desired_d, 2)
     graph_d = round(density(G), 2)
@@ -144,9 +143,9 @@ def get_data(path, sigma):
     unq_labels, unq_counts = np.unique(labels, return_counts=True)
 
     NG = graph_from_points(features, sigma)
-    aux, GT, aux2 = custom_cluster_matrix(len(labels), unq_counts, 0, 0)
+    aux, GT, aux2 = custom_cluster_matrix(len(labels), unq_counts, 0, 0, 0, 0)
 
-    return NG.astype('float32'), GT.astype('int32'), labels
+    return NG.astype('float32'), GT, labels
 
 
 def get_GCoil1_data(path):
@@ -210,45 +209,39 @@ def custom_cluster_matrix(mat_dim, dims, internoise_lvl, internoise_val, intrano
     :param intranoise_lvl : float percentage of noise within clusters
     :param intranoise_value : float value of the noise
 
-    :returns: np.array((n,n), dtype=float32) G the graph, np.array((n,n), dtype=int8) GT the ground truth, np.array() labels
+    :returns: np.array((n,n), dtype=float32) G the graph, np.array((n,n), dtype=int8) GT the ground truth, 
+              np.array(n, dtype=int16) labels
     """
-    if len(dims) > mat_dim:
-        sys.exit("You want more cluster than nodes???")
-        return 0
 
     if sum(dims) != mat_dim:
-        sys.exit("The sum of clusters dimensions must be equal to the total number of nodes")
-        return 0
+        raise ValueError("The sum of clusters dimensions must be equal to the total number of nodes")
 
-    mat = np.tril(np.random.random((mat_dim, mat_dim)) < internoise_lvl, -1)
-    mat = np.multiply(mat, internoise_val)
+    G = np.tril(np.random.random((mat_dim, mat_dim)) < internoise_lvl, -1)
+    G = np.multiply(G, internoise_val)
 
     GT = np.tril(np.zeros((mat_dim, mat_dim)), -1).astype('int8')
 
     x = 0
     for dim in dims:
-        mat2 = np.tril(np.ones((dim,dim)), -1)
+        cluster = np.tril(np.ones((dim,dim)), -1)
+        mask = np.tril(np.random.random((dim, dim)) < intranoise_lvl, -1)
 
         if intranoise_value == 0:
-            mat3 = np.tril(np.random.random((dim, dim)) < intranoise_lvl, -1)
-            mat2 += mat3
-            indices = (mat2 == 2)
-            mat2[indices] = 0
-            mat[x:x+dim,x:x+dim]= mat2
+            cluster += mask
+            indices = (cluster == 2)
+            cluster[indices] = 0
         else:
-            mat3 = np.tril(np.random.random((dim, dim)) < intranoise_lvl, -1)
-            mat3 = np.multiply(mat3, intranoise_value)
-            mat2 += mat3
-            indices = (mat2 > 1)
-            mat2[indices] = intranoise_value
-            mat[x:x+dim,x:x+dim]= mat2
+            mask = np.multiply(mask, intranoise_value)
+            cluster += mask
+            indices = (cluster > 1)
+            cluster[indices] = intranoise_value
 
+        G[x:x+dim,x:x+dim]= cluster
         GT[x:x+dim,x:x+dim]= np.tril(np.ones(dim), -1).astype('int8')
 
         x += dim
 
-    G = (mat + mat.T).astype('float32')
-    return G, GT+GT.T, np.repeat(range(1, len(dims)+1,), dims)
+    return (G + G.T).astype('float32'), GT+GT.T, np.repeat(range(1, len(dims)+1,), dims).astype('int16')
 
 
 def custom_crazy_cluster_matrix(mat_dim, dims, internoise_lvl, internoise_val, intranoise_lvl, intranoise_value):
@@ -262,13 +255,9 @@ def custom_crazy_cluster_matrix(mat_dim, dims, internoise_lvl, internoise_val, i
     ---- 
     [TODO] works only with 4 clusters
     """
-    if len(dims) > mat_dim:
-        sys.exit("You want more cluster than nodes???")
-        return 0
-
     if sum(dims) != mat_dim:
-        sys.exit("The sum of clusters dimensions must be equal to the total number of nodes")
-        return 0
+        raise ValueError("The sum of clusters dimensions must be equal to the total number of nodes")
+
 
     mat = np.tril(np.random.random((mat_dim, mat_dim)) < internoise_lvl, -1)
     mat = np.multiply(mat, internoise_val)
