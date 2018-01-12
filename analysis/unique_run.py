@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import process_datasets as pd
 import putils as pu
 import sys
+import scipy.signal as sp
+from scipy import ndimage
 import time
 
 
@@ -38,7 +40,7 @@ def best_partition(keci):
 n = 4000
 
 internoise = [0.05] #np.arange(0, 1, 0.03) 
-intranoise = [0]
+intranoise = [0.1]
 
 for intranoise_lvl in intranoise:
 
@@ -55,7 +57,7 @@ for intranoise_lvl in intranoise:
         data = {}
         data['G'] = G
         data['GT'] = GT
-        data['bounds'] = [0.01, 0.5]# [0.00018399953842163086, 0.3768310546875]
+        data['bounds'] = [0.01, 0.5]
         data['labels'] = labels
 
         s = SensitivityAnalysis(data, 'indeg_guided')
@@ -66,21 +68,25 @@ for intranoise_lvl in intranoise:
         t = time.time()
         print("[+] Density of G {0}".format(pd.density(G, weighted=True)))
         print("[+] Running...")
-        regular, k, classes, sze_idx, reg_list , nirr = s.run_alg(0.33)
+        regular, k, classes, sze_idx, reg_list , nirr = s.run_alg(0.33) #0.25 n20000
         elapsed = time.time() - t
         print(f"[+] Partition found: {regular}, {k}, {sze_idx}, {nirr}")
         print(f"[i] Time elapsed: {elapsed}")
+
 
 
         print("[+] Reconstruction")
         for t in np.arange(0,1, 0.05):
             print(f"  Threshold: {t:.2f}")
             sze_rec = s.reconstruct_mat(t, classes, k, reg_list)
-
+            f_sze_rec = ndimage.median_filter(sze_rec,15)
             print("    l2_gt   {0:.4f}".format(s.L2_metric_GT(sze_rec)))
             print("    l2_g    {0:.4f}".format(s.L2_metric(sze_rec)))
             print("    adj_idx {0:.4f}".format(s.KVS_metric(sze_rec)))
-            pu.plot_graphs([G, sze_rec], ["G", f"sze_rec {k}"])
+            print("    f_l2_gt   {0:.4f}".format(s.L2_metric_GT(f_sze_rec)))
+            print("    f_l2_g    {0:.4f}".format(s.L2_metric(f_sze_rec)))
+            print("    f_adj_idx {0:.4f}".format(s.KVS_metric(f_sze_rec)))
+            pu.plot_graphs([G, sze_rec, f_sze_rec], ["G", f"sze_rec {k}", "filtered sze"])
 
         #ipdb.set_trace()
 
