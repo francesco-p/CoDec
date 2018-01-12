@@ -35,9 +35,9 @@ def best_partition(keci):
 
 
 #for internoise_lvl in [0.1, 0.3, 0.5, 0.7]:
-n = 2000
-internoise = np.arange(0, 1, 0.03) 
-internoise = [0.05]
+n = 4000
+internoise = [0.05] #np.arange(0, 1, 0.03) 
+intranoise = [0]
 
 l2_GT = []
 l2_G = []
@@ -46,11 +46,12 @@ kld = []
 kld_GT = []
 
 
-for intranoise_lvl in [0]:
+#for intranoise_lvl in [0.1]:
+for intranoise_lvl in intranoise:
 
     for internoise_lvl in internoise: #[0.05]
-        print(internoise_lvl)
 
+        print(f"[+] Generating graph with inter:{internoise_lvl} intra:{intranoise_lvl}")
         #clusters = [int(n*0.7), int(n*0.2), int(n*0.05), int(n*0.05)]
         nc = n // 4
         clusters = [nc]*4
@@ -59,37 +60,18 @@ for intranoise_lvl in [0]:
         #G, GT, labels = pd.custom_crazy_cluster_matrix(n, clusters, internoise_lvl, 0.8, intranoise_lvl, 0)
 
 
+        print("[+] Density of G {0}".format(pd.density(G, weighted=True)))
+
         data = {}
         data['G'] = G
         data['GT'] = GT
-        data['bounds'] = [0.01, 0.5]# [0.00018399953842163086, 0.3768310546875]
+        data['bounds'] = [] #[0.01, 0.5]
         data['labels'] = labels
 
         s = SensitivityAnalysis(data, 'indeg_guided')
         s.verbose = True
         s.is_weighted = True
         #s.drop_edges_between_irregular_pairs = False
-
-        t = time.time()
-        print("running...")
-        print(pd.density(G, weighted=True))
-        regular, k, classes, sze_idx, reg_list , nirr = s.run_alg(0.33)
-        elapsed = time.time() - t
-        print(f"{regular}, {k}, {sze_idx}, {nirr}")
-        print(elapsed)
-
-
-        for t in np.arange(0,1, 0.05):
-            sze_rec = s.reconstruct_mat(t, classes, k, reg_list)
-
-            print(s.L2_metric_GT(sze_rec))
-            print(s.L2_metric(sze_rec))
-            print(s.KVS_metric(sze_rec))
-            pu.plot_graphs([G, sze_rec], ["G", f"sze_rec {k}"])
-
-        #ipdb.set_trace()
-
-        sys.exit()
 
         print("[+] Finding bounds ...")
         bounds = s.find_bounds()
@@ -112,7 +94,7 @@ for intranoise_lvl in [0]:
             nirr = partitions[k][4]
             print(f"[+] Best partition - k:{k} epsilon:{epsilon:.4f} sze_idx:{sze_idx:.4f} irr_pairs:{nirr}")
 
-            print("[+] Reconstruction and plot for each unique partition")
+            print("[+] Reconstruction and plot ")
 
             #d = pd.density(G) + 0.03
             #for t in np.arange(0.1, 1, 0.05):
