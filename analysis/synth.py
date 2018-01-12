@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 #import ipdb
 import process_datasets as pd
 import putils as pu
-#import sys
-#import time
+import sys
+import time
 
 
 def best_partition(keci):
@@ -35,7 +35,7 @@ def best_partition(keci):
 
 
 #for internoise_lvl in [0.1, 0.3, 0.5, 0.7]:
-n = 17000
+n = 2000
 internoise = np.arange(0, 1, 0.03) 
 internoise = [0.05]
 
@@ -72,19 +72,21 @@ for intranoise_lvl in [0]:
 
         t = time.time()
         print("running...")
+        print(pd.density(G, weighted=True))
         regular, k, classes, sze_idx, reg_list , nirr = s.run_alg(0.33)
         elapsed = time.time() - t
         print(f"{regular}, {k}, {sze_idx}, {nirr}")
         print(elapsed)
 
-        print(pd.density(G, weighted=True))
-        sze_rec = s.reconstruct_mat(0, classes, k, reg_list)
 
-        #pu.plot_graphs([GT, G, sze_rec], ["GT", "G", f"sze_rec {k}"])
+        for t in np.arange(0,1, 0.05):
+            sze_rec = s.reconstruct_mat(t, classes, k, reg_list)
 
-        print(s.L2_metric_GT(sze_rec))
-        print(s.L2_metric(sze_rec))
-        print(s.KVS_metric(sze_rec))
+            print(s.L2_metric_GT(sze_rec))
+            print(s.L2_metric(sze_rec))
+            print(s.KVS_metric(sze_rec))
+            pu.plot_graphs([G, sze_rec], ["G", f"sze_rec {k}"])
+
         #ipdb.set_trace()
 
         sys.exit()

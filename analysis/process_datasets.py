@@ -97,14 +97,6 @@ def synthetic_graph(n, d):
     return G + G.T
 
 
-def density(G):
-    """ Check density of a synthetic graph
-    :param G: np.array((n, n), dtype='int8') graph
-    :return: float density of the graph
-    """
-    n = G.shape[0]
-    e = np.where(G == 1)[0].size / 2
-    return e / ((n*(n-1))/2)
 
 
 def graph_from_points(x, sigma, to_remove=0):

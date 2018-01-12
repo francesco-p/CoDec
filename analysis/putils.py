@@ -29,6 +29,7 @@ def plot_graphs(graphs, titles):
         plt.title(title)
 
     plt.show()
+    plt.close()
 
 
 def cprint(msg, COL=YEL, end=b'\n'):
