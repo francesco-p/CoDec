@@ -51,7 +51,7 @@ for intranoise_lvl in intranoise:
 
     for internoise_lvl in internoise: #[0.05]
 
-        print(f"[+] Generating graph with inter:{internoise_lvl} intra:{intranoise_lvl}")
+        print(f"[+] Generating graph with n:{n} inter:{internoise_lvl} intra:{intranoise_lvl}")
         #clusters = [int(n*0.7), int(n*0.2), int(n*0.05), int(n*0.05)]
         nc = n // 4
         clusters = [nc]*4
