@@ -16,6 +16,7 @@ import io
 from scipy import ndimage
 from math import ceil
 import time
+import os.path
 
 def replicator(A, x, inds, tol, max_iter):
     error = tol + 1.0
@@ -76,26 +77,31 @@ def best_partition(keci):
 
 tm = time.time()
 
-repetitions = 5 
+repetitions = 20
 
-n = 100
+n = 2000
 refinement = 'indeg_guided'
+inbalanced = False
 
 intranoise = [0]
-internoise = [0.1, 0.3, 0.4, 0.5, 0.7, 0.8]
+internoise = [0.2, 0.4, 0.5, 0.6, 0.8]
 #intranoise = np.arange(0,1,0.05) 
 
 inter_v = 1 
 intra_v = 0
 
-header = f"n,graph_name,internoise,intranoise,density,k,epsilon,sze_idx,nirr,refinement,best_threshold,l2_G_GT,l1_G_GT,kvs_G,l2_fG_GT,l1_fG_GT,kvs_fG,l2_sze_GT,l1_sze_GT,kvs_sze,l2_fsze_GT,l1_fsze_GT,kvs_fsze\n"
-CSV_PATH = f"./data_unique_run/csv/{n}.csv"
-#with io.open(CSV_PATH, 'w') as f:
-    #f.write(header)
+header = f"n,graph_name,inbalanced,internoise,intranoise,density,k,epsilon,sze_idx,nirr,refinement,best_threshold,l2_G_GT,l1_G_GT,kvs_G,l2_fG_GT,l1_fG_GT,kvs_fG,l2_sze_GT,l1_sze_GT,kvs_sze,l2_fsze_GT,l1_fsze_GT,kvs_fsze,DS_G,DS_fG,DS_sze,DS_fsze\n"
+
+CSV_PATH = f"./data_unique_run/csv/{n}_{refinement}.csv"
+
+if not os.path.isfile(CSV_PATH):
+    with io.open(CSV_PATH, 'w') as f:
+        f.write(header)
 
 
 tensor = np.empty((repetitions, 4, len(internoise), ), dtype="float")
 
+idg = 0
 for repetition in range(0,repetitions):
 
     pu.cprint(f"Repetition {repetition}")
@@ -110,9 +116,11 @@ for repetition in range(0,repetitions):
 
         for internoise_lvl in internoise:
 
-            clusters = [int(n*0.45), int(n*0.2), int(n*0.2), int(n*0.15)]
-            #nc = n // 4
-            #clusters = [nc]*4
+            if inbalanced:
+                clusters = [int(n*0.45), int(n*0.2), int(n*0.2), int(n*0.15)]
+            else:
+                nc = n // 4
+                clusters = [nc]*4
 
             print(f"[+] Gen Graph n:{n} inter:{internoise_lvl} intra:{intranoise_lvl}")
             G, GT, labels = pd.custom_cluster_matrix(n, clusters, internoise_lvl, inter_v, intranoise_lvl, intra_v)
@@ -123,13 +131,13 @@ for repetition in range(0,repetitions):
 
             density = pd.density(G, weighted=True)
 
-            graph_name = f"{n:06d}_{internoise_lvl:.2f}_{intranoise_lvl:.2f}_{repetition:03d}"
+            graph_name = f"{idg}"
             print(graph_name)
 
             data = {}
             data['G'] = G
             data['GT'] = GT
-            data['bounds'] = [0.10, 0.5]
+            data['bounds'] = [0.05, 0.5]
             data['labels'] = labels
 
             s = SensitivityAnalysis(data, refinement)
@@ -143,7 +151,7 @@ for repetition in range(0,repetitions):
             bounds = s.find_bounds()
             print(f"[i] Bounds : {bounds}")
 
-            print(f"[+] Finding partitions ...")
+            print(f"[+] Finding partitions {refinement}...")
             partitions = s.find_partitions()
 
             if partitions == {}:
@@ -170,8 +178,8 @@ for repetition in range(0,repetitions):
             pu.cprint(f"kvs_G:{kvs_G}", COL=pu.RED)
             kvs_G_arr.append(kvs_G)
 
-            #DS_G = s.DS_metric(G)
-            #pu.cprint(f"DS_G:{DS_G}", COL=pu.RED)
+            DS_G = s.DS_metric(G)
+            pu.cprint(f"DS_G:{DS_G}", COL=pu.RED)
 
             print("[+] Filtering G")
             fG = ndimage.median_filter(G,23)
@@ -181,8 +189,8 @@ for repetition in range(0,repetitions):
             pu.cprint(f"kvs_fG:{kvs_fG}", COL=pu.RED)
             kvs_fG_arr.append(kvs_fG)
 
-            #fDS_G = s.DS_metric(fG)
-            #pu.cprint(f"fDS_G:{fDS_G}", COL=pu.RED)
+            DS_fG = s.DS_metric(fG)
+            pu.cprint(f"DS_fG:{DS_fG}", COL=pu.RED)
 
 
             print("[+] Reconstruction")
@@ -198,8 +206,8 @@ for repetition in range(0,repetitions):
                 pu.cprint(f"kvs_sze:{kvs_sze}", COL=pu.GRN)
                 kvs_sze_arr.append(kvs_sze)
 
-                #DS_sze = s.DS_metric(sze_rec)
-                #pu.cprint(f"DS_sze:{DS_sze}", COL=pu.GRN)
+                DS_sze = s.DS_metric(sze_rec)
+                pu.cprint(f"DS_sze:{DS_sze}", COL=pu.GRN)
 
                 print("[+] Filtering sze")
                 fsze = ndimage.median_filter(sze_rec,23)
@@ -209,27 +217,29 @@ for repetition in range(0,repetitions):
                 pu.cprint(f"kvs_fsze:{kvs_fsze}", COL=pu.GRN)
                 kvs_fsze_arr.append(kvs_fsze)
 
-                #DS_fsze = s.DS_metric(fsze)
-                #pu.cprint(f"DS_fsze:{DS_fsze}", COL=pu.GRN)
+                DS_fsze = s.DS_metric(fsze)
+                pu.cprint(f"DS_fsze:{DS_fsze}", COL=pu.GRN)
 
-                print(f"ari: {kvs_fG:.4f}-{kvs_fsze:.4f} | l2:{l2_fG_GT:.4f}-{l2_fsze_GT:.4f} | l1:{l1_fG_GT:.4f}-{l1_fsze_GT:.4f}")
+                #print(f"ari: {kvs_fG:.4f}-{kvs_fsze:.4f} | l2:{l2_fG_GT:.4f}-{l2_fsze_GT:.4f} | l1:{l1_fG_GT:.4f}-{l1_fsze_GT:.4f}")
 
                 if kvs_fsze > measures[0]:
                     measures = [kvs_fsze, l2_fsze_GT, l1_fsze_GT, t]
                     #np.savez(f"./data_unique_run/{graph_name}", fsze=fsze, sze_rec=sze_rec, GT=GT, G=G, epsilon=np.array(epsilon))
 
-                #pu.plot_graphs([G, sze_rec, fsze, fG ], ["G", f"sze_rec {k}", "filtered sze", "filtered G"])
+                #pu.plot_graphs([G, sze_rec, fsze, fG ], [f"G {refinement}", f"sze_rec {k}", "filtered sze", "filtered G"])
 
             kvs_fsze = measures[0]
             l2_fsze_GT = measures[1]
             l1_fsze_GT = measures[2]
             best_threshold = measures[3]
 
-            row = f"{n},{graph_name},{internoise_lvl:.2f},{intranoise_lvl:.2f},{density:.4f},{k},{epsilon:.10f},{sze_idx:.5f},{nirr},{refinement},{best_threshold:.2f},{l2_G_GT:.4f},{l1_G_GT:.4f},{kvs_G:.4f},{l2_fG_GT:.4f},{l1_fG_GT:.4f},{kvs_fG:.4f},{l2_sze_GT:.4f},{l1_sze_GT:.4f},{kvs_sze:.4f},{l2_fsze_GT:.4f},{l1_fsze_GT:.4f},{kvs_fsze:.4f}\n"
+            row = f"{n},{graph_name},{inbalanced},{internoise_lvl:.2f},{intranoise_lvl:.2f},{density:.4f},{k},{epsilon:.10f},{sze_idx:.5f},{nirr},{refinement},{best_threshold:.2f},{l2_G_GT:.4f},{l1_G_GT:.4f},{kvs_G:.4f},{l2_fG_GT:.4f},{l1_fG_GT:.4f},{kvs_fG:.4f},{l2_sze_GT:.4f},{l1_sze_GT:.4f},{kvs_sze:.4f},{l2_fsze_GT:.4f},{l1_fsze_GT:.4f},{kvs_fsze:.4f},{DS_G:.4f},{DS_fG:.4f},{DS_sze:.4f},{DS_fsze:.4f}\n"
 
             print(row, end="")
             with io.open(CSV_PATH, 'a') as f:
                 f.write(row)
+
+            idg += 1
 
 
     #ipdb.set_trace()
@@ -240,12 +250,8 @@ for repetition in range(0,repetitions):
 
 elapsed = time.time() - tm
 print(f"[i] Time elapsed: {elapsed}")
-ipdb.set_trace()
 
 tensor_sum = tensor.sum(0) / repetitions
-
-
-#[np.array(kvs_sze_arr), np.array(kvs_fsze_arr), [np.array(kvs_G_arr).mean()] * repetitions
 
 
 plt.plot(internoise, tensor_sum[0], label=f"ARI(rec)")
@@ -253,12 +259,20 @@ plt.plot(internoise, tensor_sum[1], label="ARI(rec+filter)")
 plt.plot(internoise, tensor_sum[2], label="ARI(G)")
 plt.plot(internoise, tensor_sum[3], label="ARI(G+filter)")
 
-plt.title(f"n={n}, intranoise 0%, inbalanced clusters")
+if inbalanced:
+    plt.title(f"n={n}, intranoise 0%, inbalanced clusters, ref={refinement}")
+else:
+    plt.title(f"n={n}, intranoise 0%, balanced clusters, ref={refinement}")
+
+
 plt.ylabel('ARI')
 plt.xlabel('Internoise')
 plt.legend()
 
-plt.savefig("./data_unique_run/plots/{n}_internoise.eps")
+plt.savefig(f"./data_unique_run/plots/{n}_{inbalanced}_{refinement}.eps")
+plt.savefig(f"./data_unique_run/plots/{n}_{inbalanced}_{refinement}.png")
 
 plt.show()
+
+ipdb.set_trace()
 

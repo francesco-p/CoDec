@@ -556,7 +556,7 @@ class SensitivityAnalysis:
         return x
 
 
-    def dominant_sets(self, graph_mat, max_k=4, tol=1e-5, max_iter=1000):
+    def dominant_sets(self, graph_mat, max_k=4, tol=1e-5, max_iter=100):
         graph_cardinality = graph_mat.shape[0]
         if max_k == 0:
             max_k = graph_cardinality
