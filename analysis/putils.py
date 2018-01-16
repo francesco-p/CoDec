@@ -3,6 +3,7 @@ import random
 import matplotlib.pyplot as plt
 #import ipdb
 
+
 RST = b'\x1B[0m'
 RED = b'\x1B[31m'
 GRN = b'\x1B[32m'
@@ -13,7 +14,6 @@ CYN = b'\x1B[36m'
 BLD = b'\x1B[1m'
 REV = b'\x1B[7m'
 WHT = b'\x1B[37m'
-
 
 
 def plot_graphs(graphs, titles):
@@ -67,11 +67,12 @@ def cpprint(array, idxs, length=25):
             print()
         count += 1
 
+
 def condprint(array, el, length=25):
     """
-    Colored print of an array, it highlights the elements in idx positions.
+    Colored print of an array, it highlights the elements which equal el.
     :param array: the array of elements
-    :param idxs: the indices of the elements to be highlighted
+    :param idxs: the elements to be printed
     :param length: the length of the rows to be displayed
     """
     if len(array) < 25:

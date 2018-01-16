@@ -35,7 +35,7 @@ def best_partition(keci):
 
 
 #for internoise_lvl in [0.1, 0.3, 0.5, 0.7]:
-n = 4000
+n = 2000
 internoise = [0.05] #np.arange(0, 1, 0.03) 
 intranoise = [0]
 

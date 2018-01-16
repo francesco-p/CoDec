@@ -156,7 +156,7 @@ def get_XPCA_data(path, sigma=0, to_remove=0):
     c_dimensions = [1000]*int(tot_dim/1000)
     if tot_dim % 1000:
         c_dimensions.append(tot_dim % 1000)
-    aux, GT, labels = custom_cluster_matrix(tot_dim, c_dimensions, 0, 0)
+    aux, GT, labels = custom_cluster_matrix(tot_dim, c_dimensions, 0, 0, 0, 0)
 
     return NG, GT, labels
 
@@ -208,15 +208,15 @@ def custom_cluster_matrix(mat_dim, dims, internoise_lvl, internoise_val, intrano
     if sum(dims) != mat_dim:
         raise ValueError("The sum of clusters dimensions must be equal to the total number of nodes")
 
-    G = np.tril(np.random.random((mat_dim, mat_dim)) < internoise_lvl, -1)
+    G = np.tril(np.random.random((mat_dim, mat_dim)).astype('float32') < internoise_lvl, -1).astype('float32')
     G = np.multiply(G, internoise_val)
 
-    GT = np.tril(np.zeros((mat_dim, mat_dim)), -1).astype('int8')
+    GT = np.tril(np.zeros((mat_dim, mat_dim), dtype="int8"), -1)
 
     x = 0
     for dim in dims:
-        cluster = np.tril(np.ones((dim,dim)), -1)
-        mask = np.tril(np.random.random((dim, dim)) < intranoise_lvl, -1)
+        cluster = np.tril(np.ones((dim,dim), dtype="float32"), -1)
+        mask = np.tril(np.random.random((dim, dim)).astype("float32") < intranoise_lvl, -1)
 
         if intranoise_value == 0:
             cluster += mask
@@ -229,11 +229,11 @@ def custom_cluster_matrix(mat_dim, dims, internoise_lvl, internoise_val, intrano
             cluster[indices] = intranoise_value
 
         G[x:x+dim,x:x+dim]= cluster
-        GT[x:x+dim,x:x+dim]= np.tril(np.ones(dim), -1).astype('int8')
+        GT[x:x+dim,x:x+dim]= np.tril(np.ones(dim, dtype="int8"), -1)
 
         x += dim
 
-    return (G + G.T).astype('float32'), GT+GT.T, np.repeat(range(1, len(dims)+1,), dims).astype('int16')
+    return (G + G.T), (GT + GT.T), np.repeat(range(1, len(dims)+1,), dims).astype('uint32')
 
 
 def custom_crazy_cluster_matrix(mat_dim, dims, internoise_lvl, internoise_val, intranoise_lvl, intranoise_value):
@@ -281,5 +281,18 @@ def custom_crazy_cluster_matrix(mat_dim, dims, internoise_lvl, internoise_val, i
     m = (mat + mat.T).astype('float32')
     #print(np.unique(m.flatten()))
     return m, GT+GT.T, np.repeat(range(1, len(dims)+1,), dims)
+
+def test_custom_cluster_matrix():
+        n= 20000
+        nc = n // 4
+        clusters = [nc]*4
+        G, GT, labels = custom_cluster_matrix(n, clusters, 0.3, 1, 0.3, 0)
+        print(f"G.dtype:{G.dtype} GT.dtype:{GT.dtype} labels.dtype:{labels.dtype}")
+        print(f"G MB:{G.nbytes/1024**2:.2f} GT MB:{GT.nbytes/1024**2:.2f} labels MB:{labels.nbytes/1024**2:.2f}")
+
+        plt.imshow(G)
+        plt.show()
+        plt.imshow(GT)
+        plt.show()
 
 
