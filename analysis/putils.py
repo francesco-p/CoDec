@@ -16,7 +16,7 @@ REV = b'\x1B[7m'
 WHT = b'\x1B[37m'
 
 
-def plot_graphs(graphs, titles):
+def plot_graphs(graphs, titles, FILENAME="./", save=False):
     """ Plot n graphs with the specified titles
     :param graphs: list(np.array) graphs to be plot
     :param titles: list(string) titles of the graphs
@@ -27,6 +27,9 @@ def plot_graphs(graphs, titles):
         plt.subplot(1, len(graphs), i+1)
         plt.imshow(graph)
         plt.title(title)
+
+    if save:
+        plt.savefig(FILENAME)
 
     plt.show()
     plt.close()

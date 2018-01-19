@@ -131,8 +131,8 @@ class SzemerediRegularityLemma:
         :param verbose: if set to True some debug info is printed
         :return the reduced similarity matrix
         """
-        np.random.seed(314)
-        random.seed(314)
+        #np.random.seed(314)
+        #random.seed(314)
 
         if 0.0 < compression_rate <= 1.0:
             max_k = int(compression_rate * self.N)

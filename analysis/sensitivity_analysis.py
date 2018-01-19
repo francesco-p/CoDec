@@ -29,6 +29,7 @@ class SensitivityAnalysis:
         self.min_k = 4
         self.min_step = 0.01#0.0001 #0.00001
         self.tries = 20
+        self.fast_search  = True # stops searching for partitions if irregular and > k
 
         self.epsilons = []
 
@@ -183,8 +184,8 @@ class SensitivityAnalysis:
                 else:
                     self.k_e_c_i[k] = (epsilon, classes, sze_idx, reg_list, nirr)
 
-            #elif not regular and k>self.min_k:
-                #return self.k_e_c_i
+            elif self.fast_search and not regular and k>self.min_k:
+                return self.k_e_c_i
 
         return self.k_e_c_i
 
@@ -373,13 +374,6 @@ class SensitivityAnalysis:
     #### Metrics ####
     #################
 
-
-    def termo_metric(self, graph):
-        """ Creates a feature vector of with some measures of the graph
-        :param graph: np.array() reconstructed graph
-        :returns: np.array(float64) feature vector of measures
-        """
-        pass
 
     def KLdivergence_metric_GT(self, graph):
         """ Computes thhe kulback liebeler divergence

@@ -18,41 +18,6 @@ from math import ceil
 import time
 import os.path
 
-def replicator(A, x, inds, tol, max_iter):
-    error = tol + 1.0
-    count = 0
-    while error > tol and count < max_iter:
-        x_old = np.copy(x)
-        for i in inds:
-            x[i] = x_old[i] * (A[i] @ x_old)
-        x /= np.sum(x)
-        error = np.linalg.norm(x - x_old)
-        count += 1
-    return x
-
-
-def dominant_sets(graph_mat, max_k=0, tol=1e-5, max_iter=1000):
-    graph_cardinality = graph_mat.shape[0]
-    if max_k == 0:
-        max_k = graph_cardinality
-    clusters = np.zeros(graph_cardinality)
-    already_clustered = np.full(graph_cardinality, False, dtype=np.bool)
-
-    for k in range(max_k):
-        if graph_cardinality - already_clustered.sum() <= ceil(0.05 * graph_cardinality):
-            break
-        # 1000 is added to obtain more similar values when x is normalized
-        # x = np.random.random_sample(graph_cardinality) + 1000.0
-        x = np.full(graph_cardinality, 1.0)
-        x[already_clustered] = 0.0
-        x /= x.sum()
-
-        y = replicator(graph_mat, x, np.where(~already_clustered)[0], tol, max_iter)
-        cluster = np.where(y >= 1.0 / (graph_cardinality * 1.5))[0]
-        already_clustered[cluster] = True
-        clusters[cluster] = k
-    clusters[~already_clustered] = k
-    return clusters
 
 def best_partition(keci):
     """ Selects the best partition (highest sze_idx)
@@ -79,38 +44,39 @@ tm = time.time()
 
 repetitions = 20
 
-n = 2000
+n = 1000
 refinement = 'indeg_guided'
 inbalanced = False
 
+#intranoise = [0.05, 0.1, 0.2]
+#internoise = [0.05, 0.1, 0.2]
+
 intranoise = [0]
 internoise = [0.2, 0.4, 0.5, 0.6, 0.8]
-#intranoise = np.arange(0,1,0.05) 
 
 inter_v = 1 
 intra_v = 0
 
-header = f"n,graph_name,inbalanced,internoise,intranoise,density,k,epsilon,sze_idx,nirr,refinement,best_threshold,l2_G_GT,l1_G_GT,kvs_G,l2_fG_GT,l1_fG_GT,kvs_fG,l2_sze_GT,l1_sze_GT,kvs_sze,l2_fsze_GT,l1_fsze_GT,kvs_fsze,DS_G,DS_fG,DS_sze,DS_fsze\n"
+header = f"n,graph_name,inbalanced,internoise,intranoise,density,k,epsilon,sze_idx,nirr,refinement,best_threshold,l2_G_GT,l1_G_GT,kvs_G,l2_fG_GT,l1_fG_GT,kvs_fG,l2_sze_GT,l1_sze_GT,kvs_sze,l2_fsze_GT,l1_fsze_GT,kvs_fsze,DS_G,DS_fG,DS_sze,DS_fsze,l2_sze_G,l2_fsze_fG,l2_sze_fG,l2_fsze_G,l1_sze_G\n"
 
-CSV_PATH = f"./data_unique_run/csv/{n}_{refinement}.csv"
+CSV_PATH = f"./data_unique_run/csv/{n}.csv"
 
 if not os.path.isfile(CSV_PATH):
     with io.open(CSV_PATH, 'w') as f:
         f.write(header)
 
 
-tensor = np.empty((repetitions, 4, len(internoise), ), dtype="float")
+#tensor = np.empty((repetitions, 4, len(internoise), ), dtype="float")
 
 idg = 0
 for repetition in range(0,repetitions):
 
-    pu.cprint(f"Repetition {repetition}")
-    
+    pu.cprint(f"Repetition:{repetition}/{repetitions} intra:{intranoise} inter:{internoise}")
+
     kvs_sze_arr = []
     kvs_fsze_arr = []
     kvs_G_arr = []
     kvs_fG_arr = []
-
 
     for intranoise_lvl in intranoise:
 
@@ -143,6 +109,9 @@ for repetition in range(0,repetitions):
             s = SensitivityAnalysis(data, refinement)
             s.verbose = True
             s.is_weighted = True
+            s.fast_search = True
+            #if inbalanced:
+                #s.fast_search = False
             #s.drop_edges_between_irregular_pairs = False
 
             print(f"[+] Density of G {density}")
@@ -220,11 +189,9 @@ for repetition in range(0,repetitions):
                 DS_fsze = s.DS_metric(fsze)
                 pu.cprint(f"DS_fsze:{DS_fsze}", COL=pu.GRN)
 
-                #print(f"ari: {kvs_fG:.4f}-{kvs_fsze:.4f} | l2:{l2_fG_GT:.4f}-{l2_fsze_GT:.4f} | l1:{l1_fG_GT:.4f}-{l1_fsze_GT:.4f}")
 
                 if kvs_fsze > measures[0]:
                     measures = [kvs_fsze, l2_fsze_GT, l1_fsze_GT, t]
-                    #np.savez(f"./data_unique_run/{graph_name}", fsze=fsze, sze_rec=sze_rec, GT=GT, G=G, epsilon=np.array(epsilon))
 
                 #pu.plot_graphs([G, sze_rec, fsze, fG ], [f"G {refinement}", f"sze_rec {k}", "filtered sze", "filtered G"])
 
@@ -233,7 +200,13 @@ for repetition in range(0,repetitions):
             l1_fsze_GT = measures[2]
             best_threshold = measures[3]
 
-            row = f"{n},{graph_name},{inbalanced},{internoise_lvl:.2f},{intranoise_lvl:.2f},{density:.4f},{k},{epsilon:.10f},{sze_idx:.5f},{nirr},{refinement},{best_threshold:.2f},{l2_G_GT:.4f},{l1_G_GT:.4f},{kvs_G:.4f},{l2_fG_GT:.4f},{l1_fG_GT:.4f},{kvs_fG:.4f},{l2_sze_GT:.4f},{l1_sze_GT:.4f},{kvs_sze:.4f},{l2_fsze_GT:.4f},{l1_fsze_GT:.4f},{kvs_fsze:.4f},{DS_G:.4f},{DS_fG:.4f},{DS_sze:.4f},{DS_fsze:.4f}\n"
+            l2_sze_G = s.L2_metric(sze_rec)
+            l1_sze_G = s.L1_metric(sze_rec)
+            l2_fsze_fG = np.linalg.norm(fG-fsze)/fG.shape[0]
+            l2_sze_fG = np.linalg.norm(fG-sze_rec)/fG.shape[0]
+            l2_fsze_G = np.linalg.norm(G-fsze)/G.shape[0]
+
+            row = f"{n},{graph_name},{inbalanced},{internoise_lvl:.2f},{intranoise_lvl:.2f},{density:.4f},{k},{epsilon:.10f},{sze_idx:.5f},{nirr},{refinement},{best_threshold:.2f},{l2_G_GT:.4f},{l1_G_GT:.4f},{kvs_G:.4f},{l2_fG_GT:.4f},{l1_fG_GT:.4f},{kvs_fG:.4f},{l2_sze_GT:.4f},{l1_sze_GT:.4f},{kvs_sze:.4f},{l2_fsze_GT:.4f},{l1_fsze_GT:.4f},{kvs_fsze:.4f},{DS_G:.4f},{DS_fG:.4f},{DS_sze:.4f},{DS_fsze:.4f},{l2_sze_G:.4f},{l2_fsze_fG:.4f},{l2_sze_fG:.4f},{l2_fsze_G:.4f},{l1_sze_G:.4f}\n"
 
             print(row, end="")
             with io.open(CSV_PATH, 'a') as f:
@@ -244,15 +217,17 @@ for repetition in range(0,repetitions):
 
     #ipdb.set_trace()
 
-    tensor[repetition] = np.array([kvs_sze_arr, kvs_fsze_arr, kvs_G_arr, kvs_fG_arr])
+    #tensor[repetition] = np.array([kvs_sze_arr, kvs_fsze_arr, kvs_G_arr, kvs_fG_arr])
 
 
 
 elapsed = time.time() - tm
 print(f"[i] Time elapsed: {elapsed}")
 
-tensor_sum = tensor.sum(0) / repetitions
+ipdb.set_trace()
 
+"""
+tensor_sum = tensor.sum(0) / repetitions
 
 plt.plot(internoise, tensor_sum[0], label=f"ARI(rec)")
 plt.plot(internoise, tensor_sum[1], label="ARI(rec+filter)")
@@ -273,6 +248,4 @@ plt.savefig(f"./data_unique_run/plots/{n}_{inbalanced}_{refinement}.eps")
 plt.savefig(f"./data_unique_run/plots/{n}_{inbalanced}_{refinement}.png")
 
 plt.show()
-
-ipdb.set_trace()
-
+"""
