@@ -35,7 +35,7 @@ class SensitivityAnalysis:
 
         # SZE algorithm parameters
         self.kind = "alon"
-        self.is_weighted = False
+        self.is_weighted = True
         self.random_initialization = True
 
         if refinement == 'degree_based':
@@ -318,6 +318,7 @@ class SensitivityAnalysis:
                 if bip_density > thresh:
                     if self.is_weighted:
                         reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = bip_density
+                        #reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = np.tril(np.random.random((r_nodes.size, r_nodes.size)) <= bip_density, -1).astype('float32')
                     else:
                         reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = 1
 

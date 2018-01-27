@@ -18,12 +18,12 @@ def check_validity(G, n, desired_d, desired_dtype):
     assert desired_d-tolerance < graph_d and graph_d < desired_d+tolerance, "Density is not correct"
 
 
-def synthetic_graph(n, d):
+def synthetic_graph(n, d, datatype):
     """ Generate a n,n graph with a given density d
     :param d: float density of the graph
     :return: np.array((n, n), dtype='float32') graph with density d
     """
-    G = np.tril(np.random.random((n, n)) <= d, -1).astype('int8')
+    G = np.tril(np.random.random((n, n)) <= d, -1).astype(datatype)
     return G + G.T
 
 def synthethic_grid_graph(n):
@@ -88,13 +88,6 @@ def search_dset(filename, synth=False):
         raise FileNotFoundError(f"{path}{filename}.npz")
 
 
-def synthetic_graph(n, d):
-    """ Generate a n,n graph with a given density d
-    :param d: float density of the graph
-    :return: np.array((n, n), dtype='float32') graph with density d
-    """
-    G = np.tril(np.random.random((n, n)) < d, -1).astype('int8')
-    return G + G.T
 
 
 

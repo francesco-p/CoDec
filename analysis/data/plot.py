@@ -51,7 +51,7 @@ class CSV_Plot:
 
             for metric in self.metrics:
                 df = pd.read_csv(csv_file, delimiter=',', index_col=1)
-                ref = df['refinement'].values[0]
+                ref = df['refinement_type'].values[0]
 
                 aux = df[df['k'] > 2]
                 data_to_plot = []
@@ -93,15 +93,17 @@ if __name__ == '__main__':
 
     #ns = [200, 400, 800, 1000, 2000]
 
-    ns = [200, 400]
-    densities = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.40, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.80, 0.85, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1]
+    ns = [2000]
+    #densities = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.40, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.80, 0.85, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1]
+    densities = [0.2,0.40,0.5,0.6, 0.80, 0.9]
     SAVE_PATH = './plots/'
     refinement_type = 'indeg_guided'
     CSV_PATH = './csv/'
-    metrics=['L2_distance','sze_idx','kld_1','kld_2']
+    metrics=['l2','l1','sze_idx']
     p = CSV_Plot(ns, densities[::-1], refinement_type, CSV_PATH, SAVE_PATH, metrics)
     p.plot2()
-    p.refinement_type = 'degree_based'
-    p.plot2()
+
+    #p.refinement_type = 'degree_based'
+    #p.plot2()
 
     #montage *.png -tile 2x0 -geometry 1000 assemply.pdf
