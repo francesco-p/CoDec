@@ -40,33 +40,33 @@ def best_partition(keci):
 
 
 
-tm = time.time()
 
-repetitions = 20
 
-n = 1000
+repetitions = 1
+n = 2000
 refinement = 'indeg_guided'
 inbalanced = False
-
-#intranoise = [0.05, 0.1, 0.2]
-#internoise = [0.05, 0.1, 0.2]
+write_csv = False
 
 intranoise = [0]
 internoise = [0.2, 0.4, 0.5, 0.6, 0.8]
-
-inter_v = 1 
+inter_v = 1
 intra_v = 0
 
 header = f"n,graph_name,inbalanced,internoise,intranoise,density,k,epsilon,sze_idx,nirr,refinement,best_threshold,l2_G_GT,l1_G_GT,kvs_G,l2_fG_GT,l1_fG_GT,kvs_fG,l2_sze_GT,l1_sze_GT,kvs_sze,l2_fsze_GT,l1_fsze_GT,kvs_fsze,DS_G,DS_fG,DS_sze,DS_fsze,l2_sze_G,l2_fsze_fG,l2_sze_fG,l2_fsze_G,l1_sze_G\n"
 
-CSV_PATH = f"./data_unique_run/csv/{n}.csv"
+if intranoise[0] != 0:
+    CSV_PATH = f"./data_unique_run/csv/{n}_intra.csv"
+else:
+    CSV_PATH = f"./data_unique_run/csv/{n}.csv"
 
-if not os.path.isfile(CSV_PATH):
+print(CSV_PATH)
+
+
+if not os.path.isfile(CSV_PATH) and write_csv:
     with io.open(CSV_PATH, 'w') as f:
         f.write(header)
 
-
-#tensor = np.empty((repetitions, 4, len(internoise), ), dtype="float")
 
 idg = 0
 for repetition in range(0,repetitions):
@@ -109,13 +109,17 @@ for repetition in range(0,repetitions):
             s = SensitivityAnalysis(data, refinement)
             s.verbose = True
             s.is_weighted = True
-            s.fast_search = True
-            #if inbalanced:
-                #s.fast_search = False
+
+            if inbalanced:
+                s.fast_search = False
+            else:
+                s.fast_search = True
+
             #s.drop_edges_between_irregular_pairs = False
 
-            print(f"[+] Density of G {density}")
+            tm = time.time()
 
+            print(f"[+] Density of G {density}")
             print("[+] Finding bounds ...")
             bounds = s.find_bounds()
             print(f"[i] Bounds : {bounds}")
@@ -167,19 +171,20 @@ for repetition in range(0,repetitions):
             #for t in [0, 0.2, 0.4, 0.6, density+0.05, density+0.03]: #np.arange(0,1, 0.05):
             for t in [0]: #np.arange(0,1, 0.05): # CHEATING WE DONT KNOW GT
                 print(f"  Threshold: {t:.2f}")
-                sze_rec = s.reconstruct_mat(t, classes, k, reg_list)
+                sze = s.reconstruct_mat(t, classes, k, reg_list)
 
-                l2_sze_GT = s.L2_metric_GT(sze_rec)
-                l1_sze_GT = s.L1_metric_GT(sze_rec)
-                kvs_sze = s.KVS_metric(sze_rec)
+                l2_sze_GT = s.L2_metric_GT(sze)
+                l1_sze_GT = s.L1_metric_GT(sze)
+                kvs_sze = s.KVS_metric(sze)
                 pu.cprint(f"kvs_sze:{kvs_sze}", COL=pu.GRN)
                 kvs_sze_arr.append(kvs_sze)
 
-                DS_sze = s.DS_metric(sze_rec)
+                DS_sze = s.DS_metric(sze)
                 pu.cprint(f"DS_sze:{DS_sze}", COL=pu.GRN)
 
                 print("[+] Filtering sze")
-                fsze = ndimage.median_filter(sze_rec,23)
+                fsze = ndimage.median_filter(sze,23)
+
                 l2_fsze_GT = s.L2_metric_GT(fsze)
                 l1_fsze_GT = s.L1_metric_GT(fsze)
                 kvs_fsze = s.KVS_metric(fsze)
@@ -193,32 +198,73 @@ for repetition in range(0,repetitions):
                 if kvs_fsze > measures[0]:
                     measures = [kvs_fsze, l2_fsze_GT, l1_fsze_GT, t]
 
-                #pu.plot_graphs([G, sze_rec, fsze, fG ], [f"G {refinement}", f"sze_rec {k}", "filtered sze", "filtered G"])
+
+                """
+                print(f"[+] Remove weights with thresholds")
+                min_l2_usze_GT = 100
+                desired_th = -1
+                for i in np.arange(0,1,0.005):
+                    usze = (sze>(i*np.max(sze)))
+                    l2_usze_GT = np.linalg.norm(GT-usze)/GT.shape[0]
+                    pu.cprint(f"{l2_usze_GT}", COL=pu.BLU)
+
+                    density_usze = pd.density(usze, weighted=False)
+
+                    if l2_usze_GT < min_l2_usze_GT:
+                        desired_th = i
+                        min_l2_usze_GT = l2_usze_GT
+                        mufsze = usze
+                    print("{:.4f} : {:.4f} : {:.4f} : {:.4f}".format(i, density_usze, density, l2_usze_GT))
+
+
+                """
+                print(f"[+] Remove weights with thresholds")
+                min_l2_usze_GT = 100
+                desired_th = -1
+                for i in np.arange(0,1,0.005):
+                    ufsze = (fsze>(i*np.max(fsze)))
+                    l2_usze_GT = np.linalg.norm(GT-ufsze)/GT.shape[0]
+                    pu.cprint(f"{l2_usze_GT}", COL=pu.BLU)
+
+                    density_usze = pd.density(ufsze, weighted=False)
+
+                    if l2_usze_GT < min_l2_usze_GT:
+                        desired_th = i
+                        min_l2_usze_GT = l2_usze_GT
+                        mufsze = ufsze
+
+                    print("{:.4f} : {:.4f} : {:.4f} : {:.4f}".format(i, density_usze, density, l2_usze_GT))
+
+
+                pu.plot_graphs([G, sze, fsze, fG, mufsze ], [f"G {n} {internoise_lvl:.2f}", f"sze {k}", "filtered sze", "filtered G", f"ufsze {desired_th:.4f}"])
+
+                if write_csv:
+                    with open(f"./data_unique_run/csv/tmp/{n}_{internoise_lvl:.2f}.csv", 'a') as f:
+                        f.write("{:.4f},{:.4f},{:.4f},{:.4f}\n".format(density,desired_th, min_l2_usze_GT, np.linalg.norm(GT-G)/GT.shape[0]))
+
+
+
+
 
             kvs_fsze = measures[0]
             l2_fsze_GT = measures[1]
             l1_fsze_GT = measures[2]
             best_threshold = measures[3]
 
-            l2_sze_G = s.L2_metric(sze_rec)
-            l1_sze_G = s.L1_metric(sze_rec)
+            l2_sze_G = s.L2_metric(sze)
+            l1_sze_G = s.L1_metric(sze)
             l2_fsze_fG = np.linalg.norm(fG-fsze)/fG.shape[0]
-            l2_sze_fG = np.linalg.norm(fG-sze_rec)/fG.shape[0]
+            l2_sze_fG = np.linalg.norm(fG-sze)/fG.shape[0]
             l2_fsze_G = np.linalg.norm(G-fsze)/G.shape[0]
 
             row = f"{n},{graph_name},{inbalanced},{internoise_lvl:.2f},{intranoise_lvl:.2f},{density:.4f},{k},{epsilon:.10f},{sze_idx:.5f},{nirr},{refinement},{best_threshold:.2f},{l2_G_GT:.4f},{l1_G_GT:.4f},{kvs_G:.4f},{l2_fG_GT:.4f},{l1_fG_GT:.4f},{kvs_fG:.4f},{l2_sze_GT:.4f},{l1_sze_GT:.4f},{kvs_sze:.4f},{l2_fsze_GT:.4f},{l1_fsze_GT:.4f},{kvs_fsze:.4f},{DS_G:.4f},{DS_fG:.4f},{DS_sze:.4f},{DS_fsze:.4f},{l2_sze_G:.4f},{l2_fsze_fG:.4f},{l2_sze_fG:.4f},{l2_fsze_G:.4f},{l1_sze_G:.4f}\n"
 
             print(row, end="")
-            with io.open(CSV_PATH, 'a') as f:
-                f.write(row)
+            if write_csv:
+                with io.open(CSV_PATH, 'a') as f:
+                    f.write(row)
 
             idg += 1
-
-
-    #ipdb.set_trace()
-
-    #tensor[repetition] = np.array([kvs_sze_arr, kvs_fsze_arr, kvs_G_arr, kvs_fG_arr])
-
 
 
 elapsed = time.time() - tm
@@ -226,26 +272,3 @@ print(f"[i] Time elapsed: {elapsed}")
 
 ipdb.set_trace()
 
-"""
-tensor_sum = tensor.sum(0) / repetitions
-
-plt.plot(internoise, tensor_sum[0], label=f"ARI(rec)")
-plt.plot(internoise, tensor_sum[1], label="ARI(rec+filter)")
-plt.plot(internoise, tensor_sum[2], label="ARI(G)")
-plt.plot(internoise, tensor_sum[3], label="ARI(G+filter)")
-
-if inbalanced:
-    plt.title(f"n={n}, intranoise 0%, inbalanced clusters, ref={refinement}")
-else:
-    plt.title(f"n={n}, intranoise 0%, balanced clusters, ref={refinement}")
-
-
-plt.ylabel('ARI')
-plt.xlabel('Internoise')
-plt.legend()
-
-plt.savefig(f"./data_unique_run/plots/{n}_{inbalanced}_{refinement}.eps")
-plt.savefig(f"./data_unique_run/plots/{n}_{inbalanced}_{refinement}.png")
-
-plt.show()
-"""
