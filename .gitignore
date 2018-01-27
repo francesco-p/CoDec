@@ -10,3 +10,7 @@ imgs/
 *.sh
 readme.txt
 !data/gen.py
+csv/
+data_unique_run/
+experiments.py
+real_dset.py
