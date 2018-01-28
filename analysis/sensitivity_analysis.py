@@ -317,8 +317,12 @@ class SensitivityAnalysis:
                 # Put edges if above threshold
                 if bip_density > thresh:
                     if self.is_weighted:
+                        #if bip density > somethin?
                         reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = bip_density
-                        #reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = np.tril(np.random.random((r_nodes.size, r_nodes.size)) <= bip_density, -1).astype('float32')
+                        #m = np.tril(np.random.random((r_nodes.size, r_nodes.size)) <= bip_density, -1).astype('float32')
+                        #m[m>0] = bip_density
+                        #reconstructed_mat[np.ix_(r_nodes, s_nodes)] =  m
+                        #reconstructed_mat[np.ix_(s_nodes, r_nodes)] = m.T
                     else:
                         reconstructed_mat[np.ix_(r_nodes, s_nodes)] = reconstructed_mat[np.ix_(s_nodes, r_nodes)] = 1
 
@@ -351,20 +355,22 @@ class SensitivityAnalysis:
 
         for r in range(2, k + 1):
 
+            r_indices = np.where(classes == r)[0]
+
             for s in (range(1, r) if not self.drop_edges_between_irregular_pairs else regularity_list[r - 2]):
 
                 # Classes indices w.r.t. original graph uint16 from 0 to 65535
-                s_indices = np.where(classes == s)[0].astype('uint16')
-                r_indices = np.where(classes == r)[0].astype('uint16')
+                s_indices = np.where(classes == s)[0]
 
-                if self.is_weighted:
+                #if self.is_weighted:
 
-                    adj_mat = (self.G > 0).astype("int8")
-                    bip_adj_mat = adj_mat[np.ix_(s_indices, r_indices)]
+                #    adj_mat = (self.G > 0).astype("int8")
+                #    bip_adj_mat = adj_mat[np.ix_(s_indices, r_indices)]
 
-                else:
-                    bip_adj_mat = self.G[np.ix_(s_indices, r_indices)]
+                #else:
+                #    bip_adj_mat = self.G[np.ix_(s_indices, r_indices)]
 
+                bip_adj_mat = self.G[np.ix_(s_indices, r_indices)]
                 classes_n = bip_adj_mat.shape[0]
                 bip_density = bip_adj_mat.sum() / (classes_n ** 2.0)
                 reduced_sim_mat[r - 1, s - 1] = reduced_sim_mat[s - 1, r - 1] = bip_density
@@ -408,6 +414,9 @@ class SensitivityAnalysis:
         :param graph: reconstructed graph
         :returns: adjusted random score
         """
+        if self.labels == []:
+            ValueError("You need to specify the vector of labels first")
+
         n = len(self.labels)
 
         max_ars = -10
