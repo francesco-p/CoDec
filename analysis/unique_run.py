@@ -40,13 +40,18 @@ def best_partition(keci):
 
 
 
-
-
 repetitions = 1
-n = 2000
+n = 200
 refinement = 'indeg_guided'
+
+# Imbalancing of clusters
 inbalanced = False
+imb_cluster = [int(n*0.45), int(n*0.2), int(n*0.2), int(n*0.15)]
+num_c = 4
+
 write_csv = False
+
+fix_bounds =  [0.05, 0.5]
 
 intranoise = [0]
 internoise = [0.2, 0.4, 0.5, 0.6, 0.8]
@@ -71,24 +76,19 @@ if not os.path.isfile(CSV_PATH) and write_csv:
 idg = 0
 for repetition in range(0,repetitions):
 
-    pu.cprint(f"Repetition:{repetition}/{repetitions} intra:{intranoise} inter:{internoise}")
-
-    kvs_sze_arr = []
-    kvs_fsze_arr = []
-    kvs_G_arr = []
-    kvs_fG_arr = []
 
     for intranoise_lvl in intranoise:
 
         for internoise_lvl in internoise:
 
-            if inbalanced:
-                clusters = [int(n*0.45), int(n*0.2), int(n*0.2), int(n*0.15)]
-            else:
-                nc = n // 4
-                clusters = [nc]*4
+            print(pu.to_header(f"r:{repetition+1}/{repetitions} n:{n} intra:{intranoise_lvl}/{intranoise} inter:{internoise_lvl}/{internoise}"))
 
-            print(f"[+] Gen Graph n:{n} inter:{internoise_lvl} intra:{intranoise_lvl}")
+            if inbalanced:
+                clusters = imb_cluster
+            else:
+                nc = n // num_c
+                clusters = [nc]*num_c
+
             G, GT, labels = pd.custom_cluster_matrix(n, clusters, internoise_lvl, inter_v, intranoise_lvl, intra_v)
             #G, GT, labels = pd.custom_crazy_cluster_matrix(n, clusters, internoise_lvl, inter_v, intranoise_lvl, 0)
             #G, GT, labels = pd.custom_cluster_matrix(n, [n], 1, 1, 0.1, 0)
@@ -97,13 +97,10 @@ for repetition in range(0,repetitions):
 
             density = pd.density(G, weighted=True)
 
-            graph_name = f"{idg}"
-            print(graph_name)
-
             data = {}
             data['G'] = G
             data['GT'] = GT
-            data['bounds'] = [0.05, 0.5]
+            data['bounds'] = fix_bounds
             data['labels'] = labels
 
             s = SensitivityAnalysis(data, refinement)
@@ -119,19 +116,20 @@ for repetition in range(0,repetitions):
 
             tm = time.time()
 
-            print(f"[+] Density of G {density}")
+            print(pu.status(f"Density of G {density}"))
+
             print("[+] Finding bounds ...")
             bounds = s.find_bounds()
-            print(f"[i] Bounds : {bounds}")
+            print(pu.status(f"Bounds : {bounds}",'i'))
 
-            print(f"[+] Finding partitions {refinement}...")
+            print(pu.status(f"Finding partitions {refinement}..."))
             partitions = s.find_partitions()
 
             if partitions == {}:
-                print("[x] No partition found")
+                print(pu.status(f"No partition found", 'x'))
             else:
                 n_partitions = len(partitions.keys()) 
-                print(f"[i] {n_partitions} partitions found")
+                print(pu.status(f"{n_partitions} partitions found", 'i'))
                 k = best_partition(partitions)
 
                 epsilon = partitions[k][0]
@@ -148,22 +146,14 @@ for repetition in range(0,repetitions):
             l2_G_GT = s.L2_metric_GT(G)
             l1_G_GT = s.L1_metric_GT(G)
             kvs_G = s.KVS_metric(G)
-            pu.cprint(f"kvs_G:{kvs_G}", COL=pu.RED)
-            kvs_G_arr.append(kvs_G)
-
             DS_G = s.DS_metric(G)
-            pu.cprint(f"DS_G:{DS_G}", COL=pu.RED)
 
             print("[+] Filtering G")
             fG = ndimage.median_filter(G,23)
             l2_fG_GT = s.L2_metric_GT(fG)
             l1_fG_GT = s.L1_metric_GT(fG)
             kvs_fG = s.KVS_metric(fG)
-            pu.cprint(f"kvs_fG:{kvs_fG}", COL=pu.RED)
-            kvs_fG_arr.append(kvs_fG)
-
             DS_fG = s.DS_metric(fG)
-            pu.cprint(f"DS_fG:{DS_fG}", COL=pu.RED)
 
 
             print("[+] Reconstruction")
@@ -176,11 +166,8 @@ for repetition in range(0,repetitions):
                 l2_sze_GT = s.L2_metric_GT(sze)
                 l1_sze_GT = s.L1_metric_GT(sze)
                 kvs_sze = s.KVS_metric(sze)
-                pu.cprint(f"kvs_sze:{kvs_sze}", COL=pu.GRN)
-                kvs_sze_arr.append(kvs_sze)
 
                 DS_sze = s.DS_metric(sze)
-                pu.cprint(f"DS_sze:{DS_sze}", COL=pu.GRN)
 
                 print("[+] Filtering sze")
                 fsze = ndimage.median_filter(sze,23)
@@ -188,11 +175,8 @@ for repetition in range(0,repetitions):
                 l2_fsze_GT = s.L2_metric_GT(fsze)
                 l1_fsze_GT = s.L1_metric_GT(fsze)
                 kvs_fsze = s.KVS_metric(fsze)
-                pu.cprint(f"kvs_fsze:{kvs_fsze}", COL=pu.GRN)
-                kvs_fsze_arr.append(kvs_fsze)
 
                 DS_fsze = s.DS_metric(fsze)
-                pu.cprint(f"DS_fsze:{DS_fsze}", COL=pu.GRN)
 
 
                 if kvs_fsze > measures[0]:
@@ -224,7 +208,6 @@ for repetition in range(0,repetitions):
                 for i in np.arange(0,1,0.005):
                     ufsze = (fsze>(i*np.max(fsze)))
                     l2_usze_GT = np.linalg.norm(GT-ufsze)/GT.shape[0]
-                    pu.cprint(f"{l2_usze_GT}", COL=pu.BLU)
 
                     density_usze = pd.density(ufsze, weighted=False)
 
@@ -257,7 +240,7 @@ for repetition in range(0,repetitions):
             l2_sze_fG = np.linalg.norm(fG-sze)/fG.shape[0]
             l2_fsze_G = np.linalg.norm(G-fsze)/G.shape[0]
 
-            row = f"{n},{graph_name},{inbalanced},{internoise_lvl:.2f},{intranoise_lvl:.2f},{density:.4f},{k},{epsilon:.10f},{sze_idx:.5f},{nirr},{refinement},{best_threshold:.2f},{l2_G_GT:.4f},{l1_G_GT:.4f},{kvs_G:.4f},{l2_fG_GT:.4f},{l1_fG_GT:.4f},{kvs_fG:.4f},{l2_sze_GT:.4f},{l1_sze_GT:.4f},{kvs_sze:.4f},{l2_fsze_GT:.4f},{l1_fsze_GT:.4f},{kvs_fsze:.4f},{DS_G:.4f},{DS_fG:.4f},{DS_sze:.4f},{DS_fsze:.4f},{l2_sze_G:.4f},{l2_fsze_fG:.4f},{l2_sze_fG:.4f},{l2_fsze_G:.4f},{l1_sze_G:.4f}\n"
+            row = f"{n},{idg},{inbalanced},{internoise_lvl:.2f},{intranoise_lvl:.2f},{density:.4f},{k},{epsilon:.10f},{sze_idx:.5f},{nirr},{refinement},{best_threshold:.2f},{l2_G_GT:.4f},{l1_G_GT:.4f},{kvs_G:.4f},{l2_fG_GT:.4f},{l1_fG_GT:.4f},{kvs_fG:.4f},{l2_sze_GT:.4f},{l1_sze_GT:.4f},{kvs_sze:.4f},{l2_fsze_GT:.4f},{l1_fsze_GT:.4f},{kvs_fsze:.4f},{DS_G:.4f},{DS_fG:.4f},{DS_sze:.4f},{DS_fsze:.4f},{l2_sze_G:.4f},{l2_fsze_fG:.4f},{l2_sze_fG:.4f},{l2_fsze_G:.4f},{l1_sze_G:.4f}\n"
 
             print(row, end="")
             if write_csv:

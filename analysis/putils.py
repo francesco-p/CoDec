@@ -15,6 +15,11 @@ BLD = b'\x1B[1m'
 REV = b'\x1B[7m'
 WHT = b'\x1B[37m'
 
+
+def status(msg, kind='+'):
+    """ Given a string, it returns a message-like string"""
+    return f"[{kind}] {msg}"
+
 def to_header(msg, dec='#'):
     """ Given a string, it returns a header-like string"""
 
