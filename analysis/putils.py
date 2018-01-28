@@ -15,6 +15,14 @@ BLD = b'\x1B[1m'
 REV = b'\x1B[7m'
 WHT = b'\x1B[37m'
 
+def to_header(msg, dec='#'):
+    """ Given a string, it returns a header-like string"""
+
+    m = len(msg) 
+    m = m // len(dec) -1
+
+    return f"{dec*m+dec*6}\n{dec*2} {msg} {dec*2}\n{dec*m+dec*6}"
+
 
 def plot_graphs(graphs, titles, FILENAME="./", save=False):
     """ Plot n graphs with the specified titles
@@ -93,5 +101,4 @@ def condprint(array, el, length=25):
         if count%length == 0:
             print()
         count += 1
-
 
