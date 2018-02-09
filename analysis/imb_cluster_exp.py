@@ -66,9 +66,6 @@ fix_bounds =  [0.05, 0.5]
 tries = 20
 fsize = 23
 
-internoiselvl = 0.2
-intranoiselvl = 0
-
 # Imbalancing of clusters
 imbalanced = True
 num_cs = [2,4,8,10,16,20,40]
