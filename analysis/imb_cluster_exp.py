@@ -58,7 +58,7 @@ def random_clusters(n, num_c):
 ################ Main script code ####################
 
 # Algorithm parameters
-n = 4000
+n = 400
 repetitions = 1
 refinement = 'indeg_guided'
 write_csv = True
@@ -73,7 +73,7 @@ intranoiselvl = 0
 imbalanced = True
 num_cs = [2,4,8,10,16,20,40]
 
-header = "n,imbalanced,num_c,density,k,epsilon,sze_idx,nirr,refinement,desired_th,tpartition,treconstruction,tfiltering,kvs_sze,kvs_fsze,l2_sze_G,l2_fsze_G,l1_sze_G,l1_fsze_G,l2_usze_GT,th_usze_GT,l2_ufsze_GT,th_ufsze_GT,l2_usze_G,th_usze_G,l2_ufsze_G,th_ufsze_G\n"
+header = "n,imbalanced,num_c,internoise,intranoise,density,k,epsilon,sze_idx,nirr,refinement,desired_th,tpartition,treconstruction,tfiltering,kvs_sze,kvs_fsze,l2_sze_G,l2_fsze_G,l1_sze_G,l1_fsze_G,l2_usze_GT,th_usze_GT,l2_ufsze_GT,th_ufsze_GT,l2_usze_G,th_usze_G,l2_ufsze_G,th_ufsze_G\n"
 CSV_PATH = f"./data_unique_run/csv/imb_cluster_exp/{n}.csv"
 print(CSV_PATH)
 if not os.path.isfile(CSV_PATH) and write_csv:
@@ -97,7 +97,7 @@ for repetition in range(0,repetitions):
                     nc = n // num_c
                     clusters = [nc]*num_c
 
-                print(pu.to_header(f"r:{repetition+1}/{repetitions} n:{n} inter:{internoiselvl} intra:{intranoiselvl}"))
+                print(pu.to_header(f"r:{repetition+1}/{repetitions} n:{n} num_c:{num_c} inter:{internoiselvl} intra:{intranoiselvl}"))
                 G, GT, labels = pd.custom_cluster_matrix(n, clusters, internoiselvl, 1, intranoiselvl, 0)
                 #G, GT, labels = pd.custom_crazy_cluster_matrix(n, clusters, internoise_lvl, inter_v, intranoise_lvl, 0)
                 #G, GT, labels = pd.custom_cluster_matrix(n, [n], 1, 1, 0.1, 0)
@@ -175,7 +175,7 @@ for repetition in range(0,repetitions):
 
                 #pu.plot_graphs([G, sze, fsze, ufsze_GT], ["G", f"sze {k}", "fsze", "ufsze-GT", f"n:{n} d:{density:.4f} num_c:{num_c}"], FILENAME=f"./data_unique_run/csv/imb_cluster_exp/imgs/inter{internoiselvl:.2f}/{n}_{num_c:03}.png", save=True, show=False)
 
-                row = f"{n},{imbalanced},{num_c},{density:.4f},{k},{epsilon:.6f},{sze_idx:.4f},{nirr},{refinement},{tpartition:.2f},{treconstruction:.2f},{tfiltering:.2f},{kvs_sze:.4f},{kvs_fsze:.4f},{l2_sze_G:.4f},{l2_fsze_G:.4f},{l1_sze_G:.4f},{l1_fsze_G:.4f},{l2_usze_GT:.4f},{th_usze_GT:.2f},{l2_usze_GT:.4f},{th_usze_GT:.2f},{l2_ufsze_GT:.4f},{th_ufsze_GT:.2f},{l2_usze_G:.4f},{th_usze_G:.2f},{l2_ufsze_G:.4f},{th_ufsze_G:.2f}\n"
+                row = f"{n},{imbalanced},{num_c},{internoiselvl:.2f},{intranoiselvl:.2f},{density:.4f},{k},{epsilon:.6f},{sze_idx:.4f},{nirr},{refinement},{tpartition:.2f},{treconstruction:.2f},{tfiltering:.2f},{kvs_sze:.4f},{kvs_fsze:.4f},{l2_sze_G:.4f},{l2_fsze_G:.4f},{l1_sze_G:.4f},{l1_fsze_G:.4f},{l2_usze_GT:.4f},{th_usze_GT:.2f},{l2_usze_GT:.4f},{th_usze_GT:.2f},{l2_ufsze_GT:.4f},{th_ufsze_GT:.2f},{l2_usze_G:.4f},{th_usze_G:.2f},{l2_ufsze_G:.4f},{th_ufsze_G:.2f}\n"
                 print(row)
                 if write_csv:
                     with open(CSV_PATH, 'a') as f:
