@@ -37,18 +37,19 @@ def best_partition(partitions):
 
 # I dataset 
 
-dset = "./data_unique_run/npz/mats/K25p4EKBestFlicker4Marco.mat"
-
+dset = "./data_unique_run/npz/mats/NISTGEKforMarco.mat"
 
 
 mat = spio.loadmat(dset)
+print(mat)
 
 # Devi sapere la key giusta per accedere alla matrice
 # lo vedi da matlab oppure fai print(mat)
-G = mat['K25p4EK']
+G = mat['GEK']
+
 
 # Generare il GT con questa utility che genera grafi G e ritorna anche GT e labels
-aux, GT, labels = pd.custom_cluster_matrix(2240, [70]*32, 0,0,0,0)
+aux, GT, labels = pd.custom_cluster_matrix(5000, [500]*10, 0,0,0,0)
 
 dset_name = dset.split('/')[-1][:-4]
 print(f"[+] {dset} n={G.shape[0]} loaded, GT created.")
@@ -149,8 +150,8 @@ for repetition in range(repetitions):
         usze = (sze>(i*np.max(sze)))
 
         # Unweighting by minimizing L2(sze,G) OR L2(sze,GT)
-        l2_usze = np.linalg.norm(G-usze)/G.shape[0]
-        #l2_usze = np.linalg.norm(GT-usze)/GT.shape[0]
+        #l2_usze = np.linalg.norm(G-usze)/G.shape[0]
+        l2_usze = np.linalg.norm(GT-usze)/GT.shape[0]
 
         if l2_usze < min_l2_usze:
             desired_th = i
@@ -159,12 +160,12 @@ for repetition in range(repetitions):
 
         density_usze = pd.density(usze, weighted=False)
 
-    tremove = time.time() - tm
-    print(f"[T] Unweight: {tremove}")
+    tunweight = time.time() - tm
+    print(f"[T] Unweight: {tunweight}")
 
     print(f"[+] Best thrreshold:{desired_th:.2f} minL2:{min_l2_usze:.4f}")
 
-    print("[+] Filtering unweighted SZE --> USZE")
+    print("[+] Filtering unweighted SZE --> fUSZE")
     fmusze = ndimage.median_filter(musze,23)
 
     print("[P] plots the matrices")
