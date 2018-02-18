@@ -70,7 +70,8 @@ fsize = 23
 imbalanced = True
 num_cs = [2,4,8,10,16,20,40]
 
-header = "n,imbalanced,num_c,internoise,intranoise,density,k,epsilon,sze_idx,nirr,refinement,desired_th,tpartition,treconstruction,tfiltering,kvs_sze,kvs_fsze,l2_sze_G,l2_fsze_G,l1_sze_G,l1_fsze_G,l2_usze_GT,th_usze_GT,l2_ufsze_GT,th_ufsze_GT,l2_usze_G,th_usze_G,l2_ufsze_G,th_ufsze_G\n"
+header = f"n,imbalanced,num_c,internoiselvl,intranoiselvl,density,k,epsilon,sze_idx,nirr,refinement,tpartition,treconstruction,tfiltering,kvs_sze,kvs_fsze,l2_sze_G,l2_fsze_G,l1_sze_G,l1_fsze_G,l2_usze_GT,th_usze_GT,l2_usze_GT,th_usze_GT,l2_ufsze_GT,th_ufsze_GT,l2_usze_G,th_usze_G,l2_ufsze_G,th_ufsze_G\n"
+
 CSV_PATH = f"./data_unique_run/csv/imb_cluster_exp/{n}.csv"
 print(CSV_PATH)
 if not os.path.isfile(CSV_PATH) and write_csv:
