@@ -1,6 +1,7 @@
 import szemeredi_regularity_lemma as srl
 import partition_initialization
 import conditions
+import refinement_step as rs
 
 
 def generate_szemeredi_reg_lemma_implementation(kind, sim_mat, epsilon, is_weighted, random_initialization,
@@ -21,7 +22,10 @@ def generate_szemeredi_reg_lemma_implementation(kind, sim_mat, epsilon, is_weigh
     """
     alg = srl.SzemerediRegularityLemma(sim_mat, epsilon, is_weighted, drop_edges_between_irregular_pairs)
 
-    alg.refinement_step = refinement
+    if refinement == 'indeg_guided':
+        alg.refinement_step = rs.indeg_guided
+    if refinement == 'degree_based':
+        alg.refinement_step = rs.degree_based
 
     if random_initialization:
         alg.partition_initialization = partition_initialization.random

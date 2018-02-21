@@ -1,95 +1,10 @@
-import scipy.io as sp
+"""
+Coding: UTF-8
+Author: lakj
+Indentation : 4spaces
+"""
 import numpy as np
-#import ipdb
 import pandas as pd
-import matplotlib.pyplot as plt
-import os
-
-
-def check_validity(G, n, desired_d, desired_dtype):
-    """ Checks dimension and data type of the graph to reduce space consumption
-    Checks that the density is in desired_density +/- tolerance
-    """
-    assert G.shape[0] == n, "Dimension is not correct"
-    assert G.dtype == desired_dtype, "Data type of the graph is not correct"
-    tolerance = 0.015
-    desired_d = round(desired_d, 2)
-    graph_d = round(density(G), 2)
-    assert desired_d-tolerance < graph_d and graph_d < desired_d+tolerance, "Density is not correct"
-
-
-def synthetic_graph(n, d, datatype):
-    """ Generate a n,n graph with a given density d
-    :param d: float density of the graph
-    :return: np.array((n, n), dtype='float32') graph with density d
-    """
-    G = np.tril(np.random.random((n, n)) <= d, -1).astype(datatype)
-    return G + G.T
-
-def synthethic_grid_graph(n):
-    """ Generate a n,n mesh graph
-    :param n: int number of nodes of the graph
-    :return: np.array((n, n), dtype='float32') graph with density d
-    """
-
-    l = [x for x in range(0,n+1)]
-
-    groups = zip(l[::5], l[1::5], l[2::5], l[3::5], l[4::5])
-    groups = list(groups)
-
-    a = np.array(groups[::2]).flatten()
-    b = np.array(groups[1::2]).flatten()
-
-    mat = np.ones((n,n))
-
-    mat[np.ix_(a, b)] = 0
-    mat += mat.T
-    mat[np.where(mat == 1)] = 0
-    mat /= 2
-
-    np.fill_diagonal(mat, 0)
-
-    return mat
-
-def density(G, weighted=False):
-    """ Calculates the density of a synthetic graph
-    :param G: np.array((n, n)) graph
-    :param weighted: bool flag to discriminate weighted case
-    :return: float density of the graph
-    """
-    n = G.shape[0]
-
-    if weighted:
-        return G.sum() / (n ** 2)
-
-    e = np.where(G == 1)[0].size / 2
-    return e / ((n*(n-1))/2)
-
-def search_dset(filename, synth=False):
-    """ Search for a .npz file into data/npz/ folder then if exists it returns the dictionary with NG, GT, bounds
-    :param dataset: of the dataset
-    :param sigma: sigma of the gaussian kernel
-    :returns: None if no file or the dictionary
-    """
-    if synth:
-        loaded = np.load(filename)
-        #print(f"#### [+] {n}_{d:.2f}_{dset_id}.npy correctly loaded ####")
-        data = {}
-        data['G'] = loaded['G']
-        data['GT'] = []
-        data['bounds'] = loaded['bounds']
-        data['labels'] = []
-        return data
-    else:
-        path = "data/npz/"
-        for f in os.listdir(path):
-            if f == filename+".npz":
-                return np.load(path+f)
-        raise FileNotFoundError(f"{path}{filename}.npz")
-
-
-
-
 
 
 def graph_from_points(x, sigma, to_remove=0):
@@ -119,7 +34,7 @@ def get_data(path, sigma):
     """ Given a .csv features:label it returns the dataset modified with a gaussian kernel
     :param name: the path to the .csv
     :param sigma: sigma of the gaussian kernel
-    :return: NG, GT, labels
+    :return: np.array((n,n), dtype=float32) GT int8, labels uint32
     """
     df = pd.read_csv(path, delimiter=',', header=None)
     labels = df.iloc[:,-1].astype('category').cat.codes.values
@@ -127,39 +42,11 @@ def get_data(path, sigma):
 
     unq_labels, unq_counts = np.unique(labels, return_counts=True)
 
-    NG = graph_from_points(features, sigma)
+    G = graph_from_points(features, sigma)
     aux, GT, aux2 = custom_cluster_matrix(len(labels), unq_counts, 0, 0, 0, 0)
 
-    return NG.astype('float32'), GT, labels
+    return G.astype('float32'), GT, labels
 
-
-def get_GCoil1_data(path):
-    data = sp.loadmat(path)
-    NG = data['GCoil1']
-    GT  = cluster_matrix(72, 20, 0, 0, 'constant', 0)
-    return NG.astype('float32'), GT.astype('int32'), np.repeat(np.array(range(0,20)), 72)
-
-
-def get_XPCA_data(path, sigma=0, to_remove=0):
-
-    data = sp.loadmat(path)
-    NG = graph_from_points(data['X'], sigma, to_remove)
-    # Generates the custo GT wrt the number of rows removed
-    tot_dim = 10000-to_remove
-    c_dimensions = [1000]*int(tot_dim/1000)
-    if tot_dim % 1000:
-        c_dimensions.append(tot_dim % 1000)
-    aux, GT, labels = custom_cluster_matrix(tot_dim, c_dimensions, 0, 0, 0, 0)
-
-    return NG, GT, labels
-
-
-def get_flicker32(path, sigma=0):
-    data = sp.loadmat(path)
-    #NG = graph_from_points(data['GISTall'], sigma, 0)
-    NG = data['K25']
-    GT  = cluster_matrix(70, 32, 0, 0, 'constant', 0)
-    return NG.astype('float32'), GT.astype('int32'), np.repeat(np.array(range(0,32)), 70)
 
 def synthetic_regular_partition(k, epsilon):
     """ Generates a synthetic regular partition.
@@ -185,6 +72,46 @@ def synthetic_regular_partition(k, epsilon):
     return mat + mat.T
 
 
+def synthetic_graph(n, d, datatype):
+    """ Generate a graph of n nodes with the given density d
+    :param d: float density of the graph
+    :return: np.array((n, n), dtype='datatype') graph with density d
+    """
+    G = np.tril(np.random.random((n, n)) <= d, -1).astype(datatype)
+    return G + G.T
+
+
+def density(G, weighted=True):
+    """ Calculates the density of a synthetic graph
+    :param G: np.array((n, n)) graph
+    :param weighted: bool flag to discriminate weighted case
+    :return: float density of the graph
+    """
+    n = G.shape[0]
+
+    if weighted:
+        return G.sum() / (n ** 2)
+
+    e = np.where(G == 1)[0].size / 2
+    return e / ((n*(n-1))/2)
+
+
+def random_clusters(n, num_c):
+    """
+    Creates a list of num_c int numbers whose sum is n. 
+    They represent imbalanced square clusters.
+    :param n: int total sum
+    :param num_c: int number of clusters
+    """
+
+    imb_cluster = np.random.randint(1,num_c+1, size=(num_c,))
+    imb_cluster = imb_cluster / imb_cluster.sum()
+    imb_cluster = [int(n*dim) for dim in imb_cluster]
+    if sum(imb_cluster) != n:
+        imb_cluster[-1] = imb_cluster[-1]+(n-sum(imb_cluster))
+    return imb_cluster 
+
+
 def custom_cluster_matrix(mat_dim, dims, internoise_lvl, internoise_val, intranoise_lvl, intranoise_value):
     """ Custom noisy matrix
     :param mat_dim : int dimension of the whole graph
@@ -195,7 +122,7 @@ def custom_cluster_matrix(mat_dim, dims, internoise_lvl, internoise_val, intrano
     :param intranoise_value : float value of the noise
 
     :returns: np.array((n,n), dtype=float32) G the graph, np.array((n,n), dtype=int8) GT the ground truth, 
-              np.array(n, dtype=int16) labels
+              np.array(n, dtype=uint32) labels
     """
 
     if sum(dims) != mat_dim:
@@ -227,65 +154,4 @@ def custom_cluster_matrix(mat_dim, dims, internoise_lvl, internoise_val, intrano
         x += dim
 
     return (G + G.T), (GT + GT.T), np.repeat(range(1, len(dims)+1,), dims).astype('uint32')
-
-
-def custom_crazy_cluster_matrix(mat_dim, dims, internoise_lvl, internoise_val, intranoise_lvl, intranoise_value):
-    """ Custom noisy matrix
-    :param mat_dim : dimension of the whole graph
-    :param dims: list of cluster dimensions
-    :param internoise_lvl : level of noise between clusters
-    :param noise_lvl : value of the noise
-    :returns: NG, GT, labels
-
-    ---- 
-    [TODO] works only with 4 clusters
-    """
-    if sum(dims) != mat_dim:
-        raise ValueError("The sum of clusters dimensions must be equal to the total number of nodes")
-
-
-    mat = np.tril(np.random.random((mat_dim, mat_dim)) < internoise_lvl, -1)
-    mat = np.multiply(mat, internoise_val)
-    GT = np.tril(np.zeros((mat_dim, mat_dim)), -1).astype('int8')
-    x = 0
-    i = 2
-    for dim in dims:
-        mat2 = np.tril(np.ones((dim,dim)), -1)
-
-        if intranoise_value == 0:
-            mat = mat.astype("float32")
-            mat3 = np.tril(np.random.random((dim, dim)) < intranoise_lvl, -1)
-            mat2 += mat3
-            indices = (mat2 == 2)
-            mat2[indices] = i/10
-            mat[x:x+dim,x:x+dim]= mat2
-        else:
-            mat3 = np.tril(np.random.random((dim, dim)) < intranoise_lvl, -1)
-            mat3 = np.multiply(mat3, intranoise_value)
-            mat2 += mat3
-            indices = (mat2 > 1)
-            mat2[indices] = intranoise_value
-            mat[x:x+dim,x:x+dim]= mat2
-
-        GT[x:x+dim,x:x+dim]= np.tril(np.ones(dim), -1).astype('int8')
-
-        x += dim
-        i+=2
-    m = (mat + mat.T).astype('float32')
-    #print(np.unique(m.flatten()))
-    return m, GT+GT.T, np.repeat(range(1, len(dims)+1,), dims)
-
-def test_custom_cluster_matrix():
-        n= 20000
-        nc = n // 4
-        clusters = [nc]*4
-        G, GT, labels = custom_cluster_matrix(n, clusters, 0.3, 1, 0.3, 0)
-        print(f"G.dtype:{G.dtype} GT.dtype:{GT.dtype} labels.dtype:{labels.dtype}")
-        print(f"G MB:{G.nbytes/1024**2:.2f} GT MB:{GT.nbytes/1024**2:.2f} labels MB:{labels.nbytes/1024**2:.2f}")
-
-        plt.imshow(G)
-        plt.show()
-        plt.imshow(GT)
-        plt.show()
-
 
