@@ -1,6 +1,51 @@
 import numpy as np
 from sklearn import metrics
 from scipy import stats
+from numpy import linalg as LA
+import ipdb
+
+def eigs(m):
+    """ Takes a square symmetric matrix and returns the eigenvalues and
+    eigenvectors of the normalized laplacian 
+    :param m: np.array(float) square symmetric matrix
+    :returns: (np.array(), np.array()) tuple with the first component being the
+    eigenvalues and the second eigenvectors
+    """
+    D_half = np.diag(m.sum(1)**(-1/2))
+    I = np.identity(m.shape[0])
+    norm_L = I - (np.matmul(np.matmul(D_half, m), D_half))
+    return LA.eigh(norm_L)
+
+def spectral_dist(m1, m2):
+    """ Calculates the spectral distance as specified in 
+    Network Summarization with Preserved Spectral Properties Jin
+    :param m1: np.array(float) the first matrix bigger than m2
+    :param m2: np.array(float) the second matrix smaller than m1
+    :returns: float the spectral distance
+    """
+    n = m1.shape[0]
+    k = m2.shape[0]
+    big, vec1 = eigs(m1)
+    small, vec2 = eigs(m2)
+
+    min_sd = 100
+    for l in range(1,k+1):
+        if l == k:
+            #sd = (1/k)*(small - big[:k]).sum()
+            sd = (1/k)*np.sqrt(((small - big[:k])**2).sum())
+        else:
+            #sd = (1/k)*((small[:l] - big[:l]).sum() + (big[-(k-l):] - small[l:]).sum())
+            sd = (1/k)*np.sqrt((((small[:l] - big[:l])**2).sum() + ((big[-(k-l):] - small[l:])**2).sum()))
+            #assert np.all(big[:l] <= small[:l]) and np.all(small[:l] <= big[-(k-l):]), f"Eigenerror \n{big[:l]}\n<=\n{small[:l]}\n<=\n{big[-(k-l):]}"
+
+
+        #print(f"l:{l} sd:{sd:.4f}")
+
+        if sd < min_sd:
+            min_sd = sd
+        #print(f"\n\n{[round(x,2) for x in big]}\n{[round(x,2) for x in small]} \n→ {sd}")
+
+    return min_sd
 
 
 def l2(m1, m2):
@@ -112,4 +157,52 @@ def dominant_sets(graph_mat, max_k=4, tol=1e-5, max_iter=1000):
         clusters[cluster] = k
     clusters[~already_clustered] = k
     return clusters
+
+
+# Test code
+
+def test_sub_sd(big, small):
+    min_sd = 100
+    k = small.size
+    for l in range(1,k+1):
+        if l == k:
+            #sd = (1/k)*(small - big[:k]).sum()
+            sd = (1/k)*np.sqrt(((small - big[:k])**2).sum())
+        else:
+            #sd = (1/k)*((small[:l] - big[:l]).sum() + (big[-(k-l):] - small[l:]).sum())
+            sd = (1/k)*np.sqrt((((small[:l] - big[:l])**2).sum() + ((big[-(k-l):] - small[l:])**2).sum()))
+
+        #print(sd)
+        print(f"l:{l} sd:{sd:.4f}")
+
+        if sd < min_sd:
+            min_sd = sd
+
+
+def test_sd():
+    G = np.ones((9,9))
+    G[0,1] = G[1,0] = G[1,2] = G[2,1] = G[0,2] = G[2,0] =  0
+    G[3,4] = G[4,3] = G[4,5] = G[5,4] = G[3,5] = G[5,3] =  0
+    G[6,7] = G[7,6] = G[7,8] = G[8,7] = G[6,8] = G[8,6] =  0
+    np.fill_diagonal(G, 0)
+
+    #import networkx as nx
+    #import matplotlib.pyplot as plt
+    #nx.draw_circular(nx.from_numpy_array(G))
+    #plt.show()
+
+    print(G)
+    red = np.array([[0,9,9],[9,0,9],[9,9,0]])
+    print(red)
+    sd = spectral_dist(G, red)
+    print(f"{sd:.4f}")
+
+
+#test_sd()
+#ipdb.set_trace()
+#test_sub_sd(np.array([0,0,1,1,1,1,1,1,2]), np.array([0,0,2]))
+#test_sub_sd(np.array([0,1,1,1,1,1,1,1.5,1.5]), np.array([0,1.5,1.5]))
+#ttest_sub_sd(np.array([0,0,0,1,1,1,1,1,1]), np.array([0,0,0]))
+#test_sub_sd(np.array([0,1,1,1,1,1,1,1]),np.array([0,0,0,1]))
+
 

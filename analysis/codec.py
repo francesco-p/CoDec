@@ -176,7 +176,7 @@ class Codec:
         return fsze + fsze.T 
 
 
-    def reduced_matrix(self, k, epsilon, classes, regularity_list):
+    def reduced_matrix(self, G, k, epsilon, classes, regularity_list):
         """
         Generates the similarity matrix of the current classes
         :return sim_mat: the reduced similarity matrix
@@ -191,7 +191,7 @@ class Codec:
 
                 s_indices = np.where(classes == s)[0]
 
-                bip_adj_mat = self.G[np.ix_(s_indices, r_indices)]
+                bip_adj_mat = G[np.ix_(s_indices, r_indices)]
                 classes_n = bip_adj_mat.shape[0]
                 bip_density = bip_adj_mat.sum() / (classes_n ** 2.0)
                 reduced_sim_mat[r - 1, s - 1] = reduced_sim_mat[s - 1, r - 1] = bip_density

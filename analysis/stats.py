@@ -33,6 +33,69 @@ class Stats:
         return bestmat, min_l2, threshold
 
 
+
+    def exp_header(self):
+        header="t,kvs_G,kvs_fsze,kvs_sze,sd_red_G,sd_red_GT\n"
+        #header="t,l2_fsze_G,sd_red_G\n"
+        if not os.path.isfile(self.filename):
+            print(f"[Stats] .csv new Filename: {self.filename}")
+            with open(self.filename, 'w') as f:
+                f.write(header)
+
+
+
+    def exp_stats(self, t, k, epsilon, sze_idx, nirr, refinement, G, GT, labeling, sze, fsze, red, write=False, plot=True, pp=True):
+
+        print("###### Statistics ######")
+
+        if not self.header:
+            self.exp_header()
+
+        sd_red_G = metrics.spectral_dist(G, red)
+        print(f"SD RED G {sd_red_G:.4f}")
+
+        """
+        if len(GT) != 0: 
+            sd_red_GT = metrics.spectral_dist(GT, red)
+            kvs_fsze = metrics.ARI_KVS(fsze, labeling)
+            kvs_sze = metrics.ARI_KVS(sze, labeling)
+            kvs_G = metrics.ARI_KVS(G, labeling)
+
+            if pp:
+                print(f"ARI KVS FSZE: {kvs_fsze:.4f}")
+                print(f"ARI KVS SZE: {kvs_sze:.4f}")
+                print(f"SD RED GT {sd_red_GT:.4f}")
+
+            # Not in csv
+            #print(f"ARI KVS G: {kvs_G:.4f}")
+
+
+        if plot:
+            pu.plot_graphs([G, sze, fsze, ufsze_GT], [f"G", f"SZE k:{k}", "FSZE", "UFSZE-GT"])
+
+        """
+        l2_fsze_G = metrics.l2(G, fsze)
+        #sd_red_G = metrics.spectral_dist(G, red)
+        if write:
+            row = f"{t:.2f},{kvs_G:.4f},{kvs_fsze:.4f},{kvs_sze:.4f},{sd_red_G:.4f},{sd_red_GT:.4f}\n"
+            #row = f"{t:.2f},{l2_fsze_G:.4f},{sd_red_G:.4f}\n"
+            with open(self.filename, 'a') as f:
+                f.write(row)
+            print(f"[Stats] row written to {self.filename} !")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def real_header(self):
         header = "n,density,k,epsilon,sze_idx,nirr,refinement,tcompression,tdecompression,tpostdecompression,l2_sze_G,l2_fsze_G,l1_sze_G,l1_fsze_G,l2_usze_G,th_usze_G,l2_ufsze_G,th_ufsze_G\n"
         print(f"[Stats] .csv Filename: {self.filename}")
@@ -41,7 +104,7 @@ class Stats:
                 f.write(header)
 
 
-    def real_stats(self, k, epsilon, sze_idx, nirr, refinement, G, sze, fsze, telapsed, write=False, plot=True, pp=True):
+    def real_stats(self, k, epsilon, sze_idx, nirr, refinement, G, sze, fsze, red, telapsed, write=False, plot=True, pp=True):
 
         print("###### Statistics ######")
         if not self.header:
@@ -83,7 +146,7 @@ class Stats:
 
 
     def synth_header(self):
-        header = "n,imbalanced,num_c,internoiselvl,intranoiselvl,density,k,epsilon,sze_idx,nirr,refinement,tcompression,tdecompression,tpostdecompression,kvs_sze,kvs_fsze,l2_sze_G,l2_fsze_G,l1_sze_G,l1_fsze_G,l2_sze_GT,l2_fsze_GT,l1_sze_GT,l1_fsze_GT,l2_usze_GT,th_usze_GT,l2_ufsze_GT, th_ufsze_GT,l2_usze_G, th_usze_G,l2_ufsze_G, th_ufsze_G\n"
+        header = "n,imbalanced,num_c,internoiselvl,intranoiselvl,density,k,epsilon,sze_idx,nirr,refinement,tcompression,tdecompression,tpostdecompression,kvs_sze,kvs_fsze,l2_sze_G,l2_fsze_G,l1_sze_G,l1_fsze_G,l2_sze_GT,l2_fsze_GT,l1_sze_GT,l1_fsze_GT,l2_usze_G, th_usze_G,l2_ufsze_G, th_ufsze_G\n"
         print(f"[Stats] .csv Filename: {self.filename}")
         if not os.path.isfile(self.filename):
             with open(self.filename, 'w') as f:
@@ -91,7 +154,7 @@ class Stats:
 
 
 
-    def synth_stats(self, imbalanced, num_c, internoiselvl, intranoiselvl, k, epsilon, sze_idx, nirr, refinement, G, GT, labeling, sze, fsze, telapsed, write=False, plot=True, pp=True):
+    def synth_stats(self, imbalanced, num_c, internoiselvl, intranoiselvl, k, epsilon, sze_idx, nirr, refinement, G, GT, labeling, sze, fsze, red, telapsed, write=False, plot=True, pp=True):
 
         print("###### Statistics ######")
 
@@ -118,10 +181,8 @@ class Stats:
         kvs_sze = metrics.ARI_KVS(sze, labeling)
 
         ufsze_G, l2_ufsze_G, th_ufsze_G = self.unweight(fsze, G)
-        ufsze_GT, l2_ufsze_GT, th_ufsze_GT = self.unweight(fsze, GT)
 
         usze_G, l2_usze_G, th_usze_G = self.unweight(sze, G)
-        usze_GT, l2_usze_GT, th_usze_GT = self.unweight(sze, GT)
 
         if pp:
             print(f"G density: {density}")
@@ -135,10 +196,51 @@ class Stats:
             print(f"[T] Time Post-Decompression Filtering: {tpostdecompression}")
 
         if write:
-            row = f"{n},{imbalanced},{num_c},{internoiselvl:.2f},{intranoiselvl:.2f},{density:.4f},{k},{epsilon:.6f},{sze_idx:.4f},{nirr},{refinement},{tcompression:.2f},{tdecompression:.2f},{tpostdecompression:.2f},{kvs_sze:.4f},{kvs_fsze:.4f},{l2_sze_G:.4f},{l2_fsze_G:.4f},{l1_sze_G:.4f},{l1_fsze_G:.4f},{l2_sze_GT:.4f},{l2_fsze_GT:.4f}, {l1_sze_GT:.4f},{l1_fsze_GT:.4f},{l2_usze_GT:.4f},{th_usze_GT:.2f},{l2_ufsze_GT:.4f},{th_ufsze_GT:.2f},{l2_usze_G:.4f},{th_usze_G:.2f},{l2_ufsze_G:.4f},{th_ufsze_G:.2f}\n"
+            row = f"{n},{imbalanced},{num_c},{internoiselvl:.2f},{intranoiselvl:.2f},{density:.4f},{k},{epsilon:.6f},{sze_idx:.4f},{nirr},{refinement},{tcompression:.2f},{tdecompression:.2f},{tpostdecompression:.2f},{kvs_sze:.4f},{kvs_fsze:.4f},{l2_sze_G:.4f},{l2_fsze_G:.4f},{l1_sze_G:.4f},{l1_fsze_G:.4f},{l2_sze_GT:.4f},{l2_fsze_GT:.4f}, {l1_sze_GT:.4f},{l1_fsze_GT:.4f},{l2_usze_G:.4f},{th_usze_G:.2f},{l2_ufsze_G:.4f},{th_ufsze_G:.2f}\n"
             with open(self.filename, 'a') as f:
                 f.write(row)
 
         if plot:
             pu.plot_graphs([G, sze, fsze, ufsze_GT], [f"G", f"SZE k:{k}", "FSZE", "UFSZE-GT"])
 
+"""
+    def get_measure(self, s):
+        if s == 'kvs':
+            return metrics.ARI_KVS
+        elif s == 'l2':
+            return metrics.l2
+        elif s == 'l1':
+            return metrics.l1
+        if s == 'sd':
+            return metrics.spectral_dist
+        if s == 'ds':
+            return metrics.dominant_sets
+
+        raise ValueError(f"No measure {s}")
+        return
+
+    def get_target(self, s):
+        if s == 'G':
+            return self.G
+
+    d = {'kvs_G' : metrics.ARI_KVS(kvs_G, labels),
+         'kvs_sze' : metrics.ARI_KVS(kvs_sze, labels),
+         'kvs_fsze' : metrics.ARI_KVS(kvs_fsze, labels),
+
+         'l2_sze_G' : metrics.l2(sze, G),
+         'l2_sze_GT' : metrics.l2(sze, GT),
+         'l2_fsze_G' : metrics.l2(fsze, G),
+         'l2_fsze_GT' : metrics.l2(fsze, GT),
+
+         }
+    
+
+
+    def genstat(self, measures):
+        for m in measures:
+            metric = m.split('_')
+        if metric[1] == 'G':
+            res = (G, labeling)
+            else metric[1] == 'sze':
+
+"""

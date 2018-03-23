@@ -4,7 +4,7 @@ from codec import Codec
 from stats import Stats
 import time
 
-n = 1000
+n = 100
 repetitions = 5
 inter_s = [0, 0.05, 0.1, 0.2, 0.3]
 intra_s =  inter_s
@@ -40,10 +40,10 @@ for repetition in range(repetitions):
                 fsze = cdc.post_decompression(sze, ksize)
                 tpostdecompression = time.time() - tm
 
-                #red = c.reduced_matrix(k, epsilon, classes, reg_list)
+                red = c.reduced_matrix(G, k, epsilon, classes, reg_list)
 
                 telapsed = [tcompression, tdecompression, tpostdecompression]
 
-                s.compute_stats(imbalanced, num_c, inter, intra, k, epsilon, sze_idx, nirr, refinement, G, GT, labeling, sze, fsze, telapsed, write=True, plot=True, pp=True)
+                s.synth_stats(imbalanced, num_c, inter, intra, k, epsilon, sze_idx, nirr, refinement, G, GT, labeling, sze, fsze, red, telapsed, write=True, plot=True, pp=True)
 
 
