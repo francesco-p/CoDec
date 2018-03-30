@@ -11,6 +11,7 @@ class Stats:
         self.filename = filename
         self.header = False
 
+
     def unweight(self, fsze, graph):
         """ Unweighting of fsze matrix by minimizing l2 with respect to graph
         :param fsze: np.array((n, n)) matrix to be unweighted
@@ -33,8 +34,8 @@ class Stats:
         return bestmat, min_l2, threshold
 
 
-
     def exp_header(self):
+        """ Writes the header of the .csv file in case of experimental experiments :/ """
         header="t,kvs_G,kvs_fsze,kvs_sze,sd_red_G,sd_red_GT\n"
         #header="t,l2_fsze_G,sd_red_G\n"
         if not os.path.isfile(self.filename):
@@ -45,6 +46,7 @@ class Stats:
 
 
     def exp_stats(self, t, k, epsilon, sze_idx, nirr, refinement, G, GT, labeling, sze, fsze, red, write=False, plot=True, pp=True):
+        """ Writes the lines of the .csv file in case of experimental experiments :/ """
 
         print("###### Statistics ######")
 
@@ -84,19 +86,9 @@ class Stats:
             print(f"[Stats] row written to {self.filename} !")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     def real_header(self):
+        """ Writes the header of the .csv file in case of real network experiments """
+
         header = "n,density,k,epsilon,sze_idx,nirr,refinement,tcompression,tdecompression,tpostdecompression,l2_sze_G,l2_fsze_G,l1_sze_G,l1_fsze_G,l2_usze_G,th_usze_G,l2_ufsze_G,th_ufsze_G\n"
         print(f"[Stats] .csv Filename: {self.filename}")
         if not os.path.isfile(self.filename):
@@ -105,6 +97,7 @@ class Stats:
 
 
     def real_stats(self, k, epsilon, sze_idx, nirr, refinement, G, sze, fsze, red, telapsed, write=False, plot=True, pp=True):
+        """ Writes lines of the .csv file in case of real network experiments """
 
         print("###### Statistics ######")
         if not self.header:
@@ -146,6 +139,8 @@ class Stats:
 
 
     def synth_header(self):
+        """ Writes the header of the .csv file in case of real synthetic experiments """
+
         header = "n,imbalanced,num_c,internoiselvl,intranoiselvl,density,k,epsilon,sze_idx,nirr,refinement,tcompression,tdecompression,tpostdecompression,kvs_sze,kvs_fsze,l2_sze_G,l2_fsze_G,l1_sze_G,l1_fsze_G,l2_sze_GT,l2_fsze_GT,l1_sze_GT,l1_fsze_GT,l2_usze_G, th_usze_G,l2_ufsze_G, th_ufsze_G\n"
         print(f"[Stats] .csv Filename: {self.filename}")
         if not os.path.isfile(self.filename):
@@ -155,6 +150,7 @@ class Stats:
 
 
     def synth_stats(self, imbalanced, num_c, internoiselvl, intranoiselvl, k, epsilon, sze_idx, nirr, refinement, G, GT, labeling, sze, fsze, red, telapsed, write=False, plot=True, pp=True):
+        """ Writes the lines of the .csv file in case of real synthetic experiments """
 
         print("###### Statistics ######")
 
@@ -203,44 +199,3 @@ class Stats:
         if plot:
             pu.plot_graphs([G, sze, fsze, ufsze_GT], [f"G", f"SZE k:{k}", "FSZE", "UFSZE-GT"])
 
-"""
-    def get_measure(self, s):
-        if s == 'kvs':
-            return metrics.ARI_KVS
-        elif s == 'l2':
-            return metrics.l2
-        elif s == 'l1':
-            return metrics.l1
-        if s == 'sd':
-            return metrics.spectral_dist
-        if s == 'ds':
-            return metrics.dominant_sets
-
-        raise ValueError(f"No measure {s}")
-        return
-
-    def get_target(self, s):
-        if s == 'G':
-            return self.G
-
-    d = {'kvs_G' : metrics.ARI_KVS(kvs_G, labels),
-         'kvs_sze' : metrics.ARI_KVS(kvs_sze, labels),
-         'kvs_fsze' : metrics.ARI_KVS(kvs_fsze, labels),
-
-         'l2_sze_G' : metrics.l2(sze, G),
-         'l2_sze_GT' : metrics.l2(sze, GT),
-         'l2_fsze_G' : metrics.l2(fsze, G),
-         'l2_fsze_GT' : metrics.l2(fsze, GT),
-
-         }
-    
-
-
-    def genstat(self, measures):
-        for m in measures:
-            metric = m.split('_')
-        if metric[1] == 'G':
-            res = (G, labeling)
-            else metric[1] == 'sze':
-
-"""

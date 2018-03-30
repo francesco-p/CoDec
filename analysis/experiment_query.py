@@ -23,24 +23,28 @@ from tqdm import tqdm
 
 
 refinement = 'indeg_guided'
-ksize = 23
 
-vals = [0.1 , 0.2 , 0.5]
-num_cs = [4,8,20]
+vals = [0.1 , 0.2 , 0.5, 0.7]
+first = True
+n = 1000
 
 # Query graph, the bigger one
-clusters = pd.random_clusters(1000, 8)
-G, GT, labeling = pd.custom_cluster_matrix(1000, clusters, 0.1, 1, 0.1, 0)
+clusters = pd.random_clusters(n, 8)
+inter = 0.1
+intra = 0.1
+oG, oGT, olabeling = pd.custom_cluster_matrix(n, clusters, inter, 1, intra, 0)
 c = Codec(0.15, 0.5, 5)
-k, epsilon, classes, sze_idx, reg_list, nirr = c.compress(G, refinement)
-query = c.reduced_matrix(G, k, epsilon, classes, reg_list)
+k, epsilon, classes, sze_idx, reg_list, nirr = c.compress(oG, refinement)
+query = c.reduced_matrix(oG, k, epsilon, classes, reg_list)
+
+
 
 # Database
 c = Codec(0.2, 0.5, 5)
 num_c = 8
-n = 2000
-for r in range(20):
+for r in range(5):
     for i in vals:
+
         clusters = pd.random_clusters(n, num_c)
         G, GT, labeling = pd.custom_cluster_matrix(n, clusters, i, 1, i, 0)
         k, epsilon, classes, sze_idx, reg_list, nirr = c.compress(G, refinement)
@@ -53,8 +57,14 @@ for r in range(20):
 
         density = pd.density(red)
 
-        #row = f"{density:.4f},{inter:.2f},{intra:.2f},{num_c:02d},{sd:.4f}\n"
-        row = f"{density:.4f},{i:.2f},{i:.2f},{num_c:02d},{sd:.4f}\n"
+        osd = metrics.spectral_dist(oG, G)
+
+        if first:
+            row = f"# Query: {inter:.2f},{intra:.2f}\n"
+            first = False
+        else:
+            row = f"{density:.4f},{i:.2f},{i:.2f},{num_c:02d},{sd:.4f},{osd:.4f}\n"
+
         with open("/tmp/stats.csv", 'a') as f:
             f.write(row)
 
