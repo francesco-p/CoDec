@@ -2,7 +2,9 @@
 
 This repo contains the project of my M.Sc. [thesis](https://www.overleaf.com/read/djzbpytftknc).
 
+<p align="center">
 ![CoDec Preview](./codec.png "CoDec Preview")
+</p>
 
 ## Installation
 
