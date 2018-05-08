@@ -11,7 +11,7 @@ import scipy.stats as spst
 from sklearn import metrics
 import ipdb 
 import sys
-sys.path.insert(1, '../graph_reducer/')
+sys.path.insert(1, '../approx_alon/')
 import szemeredi_lemma_builder as slb
 import refinement_step as rs
 from scipy import ndimage
