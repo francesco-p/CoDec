@@ -76,5 +76,4 @@ pu.plot_graphs([G, sze, fsze, ufsze], ["G", f"sze:{k}", "fsze", "ufsze"])
 
 #s.synth_stats(imbalanced, num_c, internoiselvl, intranoiselvl, k, epsilon, sze_idx, nirr, refinement, G, GT, labeling, sze, fsze, red, telapsed, write=False, plot=True, pp=True)
 
-
-print(metrics.spectral_dist(G, red))
+#print(metrics.spectral_dist(G, red))
