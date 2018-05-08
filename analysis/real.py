@@ -19,7 +19,7 @@ from stats import Stats
 #dset = "./data_unique_run/npz/movielens.npz"
 #dset = "./data_unique_run/npz/reactome.npz"
 #dset = "./data_unique_run/npz/email-Eu-core.npz"
-#dset = "./data_unique_run/npz/facebook.npz"
+dset = "./data_unique_run/npz/facebook.npz"
 #dset = "./data_unique_run/npz/email-Enron.npz"
 
 # Dataset spagnoli
@@ -27,7 +27,7 @@ from stats import Stats
 #dset = "./data_unique_run/npz/k25p4EK.npz"
 #dset = "./data_unique_run/npz/we2000_1.npz"
 #dset = "./data_unique_run/npz/we2000_2.npz"
-dset = "./data_unique_run/npz/RRWCoil75.npz"
+#dset = "./data_unique_run/npz/RRWCoil75.npz"
 
 
 print(dset)
@@ -51,7 +51,7 @@ refinement = 'indeg_guided'
 ksize = 23
 
 s = Stats(f"/tmp/{dset_name}.csv")
-c = Codec(0, 0.5, 40)
+c = Codec(0.1, 0.4, 40)
 
 for r in range(repetitions):
     print(f"### r={r} ###")
@@ -78,4 +78,6 @@ for r in range(repetitions):
 
     #jelse:
         #s.real_stats(k, epsilon, sze_idx, nirr, refinement, G, sze, fsze, red, telapsed, write=False, plot=True, pp=True)
+
+    pu.plot_graphs([G, sze, fsze],["G", "sze", "fsze"])
 
