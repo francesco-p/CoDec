@@ -2,7 +2,7 @@
 
 This repo contains the project of my M.Sc. [thesis](https://www.overleaf.com/read/djzbpytftknc).
 
-<img align="center" alt="CoDec Preview" src="doc/subpagelist.png">
+<img align="center" alt="CoDec Preview" src="./codec.png">
 
 ## Installation
 
