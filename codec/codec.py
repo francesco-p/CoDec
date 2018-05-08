@@ -1,10 +1,8 @@
 """
-File: sensitivity_analysis.py
-Description: This class performs a sensitivity analysis of the Szemeredi algorithm
 Coding: UTF-8
 Author: lakj
+Indentation : 4spaces
 """
-
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as spst

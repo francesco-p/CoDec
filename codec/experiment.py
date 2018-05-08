@@ -1,3 +1,8 @@
+"""
+Coding: UTF-8
+Author: lakj
+Indentation : 4spaces
+"""
 from codec import Codec
 import numpy as np
 import matplotlib.pyplot as plt

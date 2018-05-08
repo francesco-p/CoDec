@@ -1,5 +1,4 @@
 """
-File: synt.py
 Coding: UTF-8
 Author: lakj
 Indentation : 4spaces
