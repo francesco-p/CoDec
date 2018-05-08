@@ -1,10 +1,10 @@
 __pycache__/
 venv/
+data/
 conf.py
 imgs/
 *.mat
 *.npz
-*.png
 *.pdf
 *.csv
 *.sh
