@@ -1,6 +1,6 @@
 # CoDec
 
-This repo contains the project of my M.Sc. [thesis](https://www.overleaf.com/read/djzbpytftknc).
+This repo contains the project of my M.Sc. thesis entitled _"Graph Compression Using The Regularity Method"_ accessible on [arXiv](https://arxiv.org/abs/1810.07275).
 
 <p align="center">
 <img alt="CoDec Preview" src="./codec.png">
@@ -14,4 +14,4 @@ The packages required are in the file `requirements.txt`, I suggest to create a 
 
 ## How to run
 
-In order to fully understand how it works you need to hack a little bit the files. To have a demostration just run `python run.py`.
+To have a demostration just run `python run.py`, in order to fully understand I suggest to read the thesis.
